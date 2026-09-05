@@ -42,9 +42,14 @@ function baseHeaders(res) {
   res.setHeader("X-Content-Type-Options", "nosniff");
 }
 
+/* The body parser must be off: with it on, the framework consumes the
+   request stream before the handler runs, so the byte-counting loop below
+   would see nothing. The size cap is enforced manually instead. */
 export const config = {
-  api: { bodyParser: { sizeLimit: "5mb" } }
+  api: { bodyParser: false }
 };
+
+const MAX_UPLOAD = 6 * 1024 * 1024;
 
 export default async function handler(req, res) {
   baseHeaders(res);
@@ -70,7 +75,19 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     let received = 0;
-    for await (const chunk of req) received += chunk.length;
+    try {
+      for await (const chunk of req) {
+        received += chunk.length;
+        if (received > MAX_UPLOAD) {
+          res.setHeader("Content-Type", "application/json");
+          res.status(413).json({ error: "too_large", received });
+          req.destroy();
+          return;
+        }
+      }
+    } catch (e) {
+      /* client aborted at its time cap: report what arrived */
+    }
     res.setHeader("Content-Type", "application/json");
     return res.status(200).json({ received });
   }

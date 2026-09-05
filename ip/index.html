@@ -289,9 +289,54 @@ h1 em{font-style:normal;color:var(--amber)}
   tb.addEventListener("click",function(){ theme(root.getAttribute("data-theme")==="dark"?"light":"dark"); });
 
   /* ---------- measurement ---------- */
-  var RE4=/((?:[0-9]{1,3}\.){3}[0-9]{1,3})/, RE6=/([a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})/i;
-  function isPrivate(ip){ return /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.)/.test(ip); }
+  /* Candidate lines have a fixed grammar: "candidate:<f> <comp> <proto>
+     <priority> <address> <port> typ <type> ...". Reading field five is far
+     more reliable than scanning the line with a regex, which is how the old
+     code silently missed every compressed IPv6 address. */
+  function candAddress(line){
+    var f = String(line).trim().split(/\s+/);
+    if (f.length < 8) return null;
+    var i = f.indexOf("typ");
+    return { addr: f[4], typ: i > -1 ? f[i+1] : null };
+  }
 
+  /* Canonical IPv6: expands "::", strips a zone suffix, lowercases, and drops
+     leading zeros per group. Both "2a02:c7f::8d1e" and its long form come out
+     identical, so comparisons cannot be defeated by notation. */
+  function canon6(a){
+    a = String(a).toLowerCase();
+    var z = a.indexOf("%"); if (z > -1) a = a.slice(0, z);
+    var halves = a.split("::");
+    if (halves.length > 2) return null;
+    var head = halves[0] ? halves[0].split(":") : [];
+    var tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+    var fill = 8 - head.length - tail.length;
+    if (halves.length === 1){ if (head.length !== 8) return null; fill = 0; }
+    if (fill < 0) return null;
+    var groups = head.slice();
+    for (var i = 0; i < fill; i++) groups.push("0");
+    groups = groups.concat(tail);
+    if (groups.length !== 8) return null;
+    for (i = 0; i < 8; i++){
+      if (!/^[0-9a-f]{1,4}$/.test(groups[i])) return null;
+      groups[i] = groups[i].replace(/^0+(?=.)/, "");
+    }
+    return groups.join(":");
+  }
+
+  /* Not part of anyone's public identity: RFC1918, loopback, link-local,
+     zeroconf, and the carrier-NAT range 100.64/10 that mobile networks use
+     internally. Calling any of these a leak would be a false alarm. */
+  function isLocal4(ip){
+    return /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|0\.)/.test(ip);
+  }
+  function isLocal6(canon){
+    if (!canon) return true;
+    var g0 = canon.split(":")[0];
+    if (/^fe[89ab]/.test(("000"+g0).slice(-4).replace(/^0+(?=.)/,"")) || /^fe[89ab]/.test(g0)) return true;  /* fe80::/10 */
+    if (/^f[cd]/.test(g0)) return true;                                    /* fc00::/7 unique local */
+    return canon === "0:0:0:0:0:0:0:1";                                    /* loopback */
+  }
   function webrtc(){
     return new Promise(function(resolve){
       var PC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
@@ -310,12 +355,19 @@ h1 em{font-style:normal;color:var(--amber)}
       catch(e){ return fin(); }
       pc.onicecandidate=function(ev){
         if(!ev||!ev.candidate||!ev.candidate.candidate) return;
-        var c=ev.candidate.candidate;
-        if(/\.local\b/i.test(c)) return;           /* mDNS placeholder, not an address */
-        var m4=c.match(RE4), m6=c.match(RE6), f=m4?m4[1]:(m6?m6[1]:null);
-        if(!f) return;
-        if(m4&&isPrivate(f)){ if(loc.indexOf(f)<0) loc.push(f); }
-        else { if(pub.indexOf(f)<0) pub.push(f); }
+        var parsed = candAddress(ev.candidate.candidate);
+        if (!parsed || !parsed.addr) return;
+        var addr = parsed.addr;
+        if (/\.local$/i.test(addr)) return;            /* mDNS placeholder, not an address */
+        if (addr.indexOf(":") > -1){
+          var c6 = canon6(addr);
+          if (!c6) return;
+          if (isLocal6(c6)){ if (loc.indexOf(c6) < 0) loc.push(c6); }
+          else { if (pub.indexOf(c6) < 0) pub.push(c6); }
+        } else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(addr)){
+          if (isLocal4(addr)){ if (loc.indexOf(addr) < 0) loc.push(addr); }
+          else { if (pub.indexOf(addr) < 0) pub.push(addr); }
+        }
       };
       pc.onicegatheringstatechange=function(){ if(pc.iceGatheringState==="complete") fin(); };
       try{
@@ -360,38 +412,94 @@ h1 em{font-style:normal;color:var(--amber)}
       .catch(function(){});
   }
 
-  /* Throughput = payload / transfer time. Elapsed time includes one round trip
-     of connection setup before any payload moves, so the measured latency is
-     subtracted; leaving it in understates throughput, and does so more on a
-     high-latency link, which would make a distant VPN server look worse than
-     it is. */
-  function rate(bits, elapsedMs, latencyMs){
-    var transfer = elapsedMs - (latencyMs || 0);
-    if (transfer <= 0) return null;
-    return bits / (transfer/1000) / 1e6;      /* Mbps */
-  }
-
-  function download(lat){
-    var bytes = 3 * 1024 * 1024;
-    var t = performance.now();
-    return fetch("/api/speed?bytes="+bytes+"&cb="+Math.random(),{cache:"no-store"})
-      .then(function(r){ return r.arrayBuffer(); })
-      .then(function(buf){ return rate(buf.byteLength*8, performance.now()-t, lat); })
-      .catch(function(){ return null; });
-  }
-
-  function upload(lat){
-    var bytes = 1536 * 1024;
-    var data = new Uint8Array(bytes);
-    for (var at=0; at<bytes; at+=65536){
-      crypto.getRandomValues(data.subarray(at, Math.min(at+65536, bytes)));
+  /* A single total-time window folds connection ramp-up into the number and
+     understates real throughput, worse on slow or distant links. Instead the
+     transfer is sampled as it streams, the first 250ms-or-20% after the first
+     byte is discarded as ramp, and the rate comes from the steady portion.
+     Falls back to total-minus-latency when too little data arrived to judge. */
+  function steadyRate(samples, totalMs, totalBytes, latMs){
+    if (samples.length >= 3){
+      var first = samples[0], last = samples[samples.length-1];
+      var rampEnd = first.t + Math.max(250, (last.t - first.t) * 0.2);
+      var s0 = null;
+      for (var i = 0; i < samples.length; i++){
+        if (samples[i].t >= rampEnd){ s0 = samples[i]; break; }
+      }
+      if (s0 && (last.t - s0.t) > 700 && (last.b - s0.b) > 60000){
+        return ((last.b - s0.b) * 8) / ((last.t - s0.t) / 1000) / 1e6;
+      }
     }
-    var t = performance.now();
-    return fetch("/api/speed?cb="+Math.random(),
-        {method:"POST",body:new Blob([data]),cache:"no-store"})
-      .then(function(r){ return r.json(); })
-      .then(function(){ return rate(bytes*8, performance.now()-t, lat); })
-      .catch(function(){ return null; });
+    var transfer = totalMs - (latMs || 0);
+    if (transfer <= 0 || !totalBytes) return null;
+    return (totalBytes * 8) / (transfer / 1000) / 1e6;
+  }
+
+  /* Capped at 8 seconds: a fixed payload took 17+ seconds on a slow VPN while
+     the page promised fifteen. Aborting early and computing from the samples
+     already collected gives the same answer in bounded time. */
+  function download(lat){
+    var bytes = 4 * 1024 * 1024;
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    var t0 = performance.now(), samples = [], got = 0;
+    var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 8000);
+    return fetch("/api/speed?bytes="+bytes+"&cb="+Math.random(),
+        ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
+      .then(function(r){
+        if (!r.body || !r.body.getReader){
+          return r.arrayBuffer().then(function(buf){ got = buf.byteLength; });
+        }
+        var reader = r.body.getReader();
+        function pump(){
+          return reader.read().then(function(res){
+            if (res.done) return;
+            got += res.value.length;
+            samples.push({ t: performance.now() - t0, b: got });
+            return pump();
+          });
+        }
+        return pump();
+      })
+      .catch(function(){ /* aborted at the cap or dropped: judge what arrived */ })
+      .then(function(){
+        clearTimeout(timer);
+        if (!got) return null;
+        return steadyRate(samples, performance.now() - t0, got, lat);
+      });
+  }
+
+  /* XMLHttpRequest rather than fetch, because only XHR reports upload
+     progress, and without progress samples the ramp cannot be excluded.
+     Progress counts bytes handed to the network stack, which runs slightly
+     ahead of delivery; the ramp exclusion absorbs most of that. */
+  function upload(lat){
+    return new Promise(function(resolve){
+      var bytes = 1536 * 1024, data;
+      try{
+        data = new Uint8Array(bytes);
+        for (var at = 0; at < bytes; at += 65536){
+          crypto.getRandomValues(data.subarray(at, Math.min(at + 65536, bytes)));
+        }
+      }catch(e){ return resolve(null); }
+      var xhr = new XMLHttpRequest();
+      var t0 = performance.now(), samples = [], settled = false;
+      function finish(){
+        if (settled) return; settled = true;
+        clearTimeout(timer);
+        var sent = samples.length ? samples[samples.length-1].b : 0;
+        if (!sent && xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) sent = bytes;
+        if (!sent) return resolve(null);
+        resolve(steadyRate(samples, performance.now() - t0, sent, lat));
+      }
+      var timer = setTimeout(function(){ try{ xhr.abort(); }catch(e){} finish(); }, 6000);
+      try{
+        xhr.open("POST", "/api/speed?cb=" + Math.random());
+        xhr.upload.onprogress = function(e){
+          samples.push({ t: performance.now() - t0, b: e.loaded });
+        };
+        xhr.onloadend = finish;
+        xhr.send(new Blob([data]));
+      }catch(e){ clearTimeout(timer); resolve(null); }
+    });
   }
 
   function scan(phase){
@@ -438,7 +546,10 @@ h1 em{font-style:normal;color:var(--amber)}
   /* The first four groups of an IPv6 address name the network; the rest is
      the device part, which privacy extensions rotate on their own. Candidates
      from ICE arrive uncompressed, so a simple split is enough. */
-  function prefix64(a){ return String(a).split(":").slice(0,4).join(":").toLowerCase(); }
+  function prefix64(a){
+    var c = canon6(a);
+    return c ? c.split(":").slice(0,4).join(":") : String(a).toLowerCase();
+  }
 
   function compare(base, now){
     var items = [];
@@ -720,7 +831,7 @@ h1 em{font-style:normal;color:var(--amber)}
     var b=$("mainBtn"), r=$("resetBtn");
     b.disabled=true; r.disabled=true;
     b.innerHTML='<span class="spin"></span>Measuring&hellip;';
-    $("stageHint").textContent="This takes about fifteen seconds.";
+    $("stageHint").textContent="Up to about twenty seconds.";
     $("stageBox").classList.add("measuring");
 
     scan(function(m){ $("stageHint").textContent = m; }).then(function(now){

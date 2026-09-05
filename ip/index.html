@@ -535,7 +535,15 @@ h1 em{font-style:normal;color:var(--amber)}
         why6 = "The only IPv6 visible is the one the tunnel itself presents.";
       } else if (sameNet.length){
         st6 = "exposed";
-        why6 = "The IPv6 on display is from the same network as before the VPN. Only its ending changed, which happens by itself and hides nothing. Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings.";
+        /* Same address and rotated-ending are both real-network exposure, but
+           the explanation must describe the case that actually happened: text
+           claiming "the ending changed" under two identical addresses would
+           contradict the data it sits beside. */
+        var identical6 = sameNet.some(function(a){ return base6.indexOf(a) > -1; });
+        why6 = (identical6
+          ? "The exact same IPv6 address is still on display, completely untouched by the VPN."
+          : "The IPv6 on display is from the same network as before the VPN. Only its ending changed, which happens by itself and hides nothing.")
+          + " Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings.";
       } else if (!base6.length){
         st6 = "na";
         why6 = "An IPv6 address appeared only after the VPN connected, so it cannot be judged: it may belong to the VPN, or your connection may have gained IPv6 in between.";

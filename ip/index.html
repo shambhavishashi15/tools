@@ -187,7 +187,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this server only. A different server, or a busier moment, gives different numbers, so read them as the size of the change rather than a rating of your connection.</p>
+    <p>Speed figures cover the route between you and this server only, measured once each time. A busy moment or a wobble on your line moves them, so a difference under about ten per cent is noise rather than a finding. Run it twice if a number looks surprising.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -287,20 +287,37 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
     });
   }
 
-  function download(){
+  /* Serverless functions go cold. A first request can spend several hundred
+     milliseconds starting the function up, which would be counted as slow
+     network and would bias whichever run happened to be first. This request
+     is deliberately untimed and exists only to wake it. */
+  function warmup(){
+    return fetch("/api/speed?bytes=262144&cb="+Math.random(),{cache:"no-store"})
+      .then(function(r){ return r.arrayBuffer(); })
+      .catch(function(){});
+  }
+
+  /* Throughput = payload / transfer time. Elapsed time includes one round trip
+     of connection setup before any payload moves, so the measured latency is
+     subtracted; leaving it in understates throughput, and does so more on a
+     high-latency link, which would make a distant VPN server look worse than
+     it is. */
+  function rate(bits, elapsedMs, latencyMs){
+    var transfer = elapsedMs - (latencyMs || 0);
+    if (transfer <= 0) return null;
+    return bits / (transfer/1000) / 1e6;      /* Mbps */
+  }
+
+  function download(lat){
     var bytes = 3 * 1024 * 1024;
     var t = performance.now();
     return fetch("/api/speed?bytes="+bytes+"&cb="+Math.random(),{cache:"no-store"})
       .then(function(r){ return r.arrayBuffer(); })
-      .then(function(buf){
-        var secs=(performance.now()-t)/1000;
-        if(secs<=0) return null;
-        return (buf.byteLength*8)/secs/1e6;      /* Mbps */
-      })
+      .then(function(buf){ return rate(buf.byteLength*8, performance.now()-t, lat); })
       .catch(function(){ return null; });
   }
 
-  function upload(){
+  function upload(lat){
     var bytes = 1536 * 1024;
     var data = new Uint8Array(bytes);
     for (var at=0; at<bytes; at+=65536){
@@ -310,51 +327,70 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
     return fetch("/api/speed?cb="+Math.random(),
         {method:"POST",body:new Blob([data]),cache:"no-store"})
       .then(function(r){ return r.json(); })
-      .then(function(){
-        var secs=(performance.now()-t)/1000;
-        if(secs<=0) return null;
-        return (bytes*8)/secs/1e6;
-      })
+      .then(function(){ return rate(bytes*8, performance.now()-t, lat); })
       .catch(function(){ return null; });
   }
 
   function scan(){
-    return Promise.all([identity(), webrtc(), latency()]).then(function(r){
-      /* Transfers run after the rest so they do not compete with the lookups
-         for bandwidth and understate their own result. */
-      return download().then(function(dl){
-        return upload().then(function(ul){
-          var id = r[0] || {}, rtc = r[1];
-          return {
-            at: Date.now(),
-            ip: id.ip || null,
-            city: id.city || null,
-            country: id.countryName || id.country || null,
-            org: id.org || null,
-            apiTz: id.timezone || null,
-            tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
-                             catch(e){ return null; } })(),
-            rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
-            rtc6: rtc.pub.filter(function(a){ return a.indexOf(":")>-1; }),
-            latency: r[2], down: dl, up: ul
-          };
+    return warmup().then(function(){
+      return Promise.all([identity(), webrtc(), latency()]).then(function(r){
+        var lat = r[2];
+        /* Transfers run last and one at a time so they do not compete with the
+           lookups, or with each other, for the same bandwidth. */
+        return download(lat).then(function(dl){
+          return upload(lat).then(function(ul){
+            var id = r[0] || {}, rtc = r[1];
+            return {
+              at: Date.now(),
+              ip: id.ip || null,
+              city: id.city || null,
+              country: id.countryName || id.country || null,
+              org: id.org || null,
+              apiTz: id.timezone || null,
+              tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+                               catch(e){ return null; } })(),
+              rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
+              rtc6: rtc.pub.filter(function(a){ return a.indexOf(":")>-1; }),
+              latency: lat, down: dl, up: ul
+            };
+          });
         });
       });
     });
   }
 
   /* ---------- comparison ----------
-     Each entry is one thing a VPN is supposed to conceal. Hidden means the
-     value visible now is no longer the value visible without the VPN. */
+     Each entry is one thing a VPN is supposed to conceal. The judgments are
+     made against what is visible NOW, not merely against the baseline value,
+     because real addresses rotate on their own: a carrier can reassign your
+     IPv4 mid-test and IPv6 endings rotate by design, and a baseline-only
+     comparison waves both through as "hidden" while your real network is
+     still on display. */
+
+  /* The first four groups of an IPv6 address name the network; the rest is
+     the device part, which privacy extensions rotate on their own. Candidates
+     from ICE arrive uncompressed, so a simple split is enough. */
+  function prefix64(a){ return String(a).split(":").slice(0,4).join(":").toLowerCase(); }
+
   function compare(base, now){
     var items = [];
 
     function simple(name, was, is, weight, whyHidden, whyExposed){
       var known = was != null && was !== "";
-      var hidden = known && is != null && String(is) !== String(was);
-      items.push({ name:name, was:was, is:is, weight:weight,
-        state: !known ? "na" : (hidden ? "hidden" : "exposed"),
-        why: !known ? null : (hidden ? whyHidden : whyExposed) });
+      var st, why;
+      if (!known){
+        st = "na"; why = null;
+      } else if (is == null){
+        /* A failed lookup is not evidence of exposure. Reporting unknown as
+           "still visible" would be inventing a finding. */
+        st = "na";
+        why = "This could not be measured on this run, so no claim is made either way.";
+      } else if (String(is) !== String(was)){
+        st = "hidden"; why = whyHidden;
+      } else {
+        st = "exposed"; why = whyExposed;
+      }
+      items.push({ name:name, was:was, is:is, weight:weight, state:st, why:why });
     }
 
     simple("Your IP address", base.ip, now.ip, 30,
@@ -371,31 +407,78 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
       "Your apparent location moved.",
       "Your location looks the same as it did before.");
 
-    /* WebRTC judged against the baseline address rather than merely checked
-       for presence: still showing the old address means the tunnel is being
-       bypassed, which is the leak that actually matters. */
-    var leaked4 = base.rtc4.filter(function(a){ return now.rtc4.indexOf(a) > -1; });
-    items.push({
-      name:"Your address via WebRTC", weight:25,
-      was: base.rtc4.length ? base.rtc4.join(", ") : "none",
-      is: now.rtc4.length ? now.rtc4.join(", ") : "none",
-      state: !base.rtc4.length ? "na" : (leaked4.length ? "exposed" : "hidden"),
-      why: !base.rtc4.length ? null : (leaked4.length
-        ? "Your browser is still handing out the address you had before. Any page can read it in a few lines of script, straight past the tunnel. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser."
-        : "Your browser is no longer giving out the address it had before.")
-    });
+    /* WebRTC IPv4. A candidate is fine only if it is the address the site
+       already sees. It is a leak if it is a known real address from the
+       baseline, or any address that differs from the one the tunnel presents:
+       that covers a real address the carrier reassigned since the baseline,
+       which an old-address comparison would miss. */
+    var seen4 = (now.ip && String(now.ip).indexOf(":") < 0) ? now.ip : null;
+    var candidates4 = now.rtc4 || [];
+    var extra4 = candidates4.filter(function(a){ return a !== seen4; });
+    var known4 = extra4.filter(function(a){ return (base.rtc4 || []).indexOf(a) > -1; });
+    var st4, why4;
+    if (!candidates4.length){
+      st4 = "hidden";
+      why4 = "Your browser is not giving out any address through WebRTC.";
+    } else if (!extra4.length){
+      /* Candidates only repeat the address the site already sees. Whether that
+         counts as hidden depends on whether that address is itself concealed:
+         repeating a tunnel's address reveals nothing, repeating your own
+         unchanged address is exposure with extra steps. */
+      if (base.ip && now.ip && String(now.ip) !== String(base.ip)){
+        st4 = "hidden";
+        why4 = "WebRTC only repeats the tunnel's own address, so nothing of yours is revealed.";
+      } else if ((base.rtc4 || []).indexOf(seen4) > -1 || (base.ip && String(now.ip) === String(base.ip))){
+        st4 = "exposed";
+        why4 = "WebRTC repeats your real address, and nothing is concealing it.";
+      } else {
+        st4 = "na";
+        why4 = "WebRTC repeats the current address, but the baseline is incomplete, so it cannot be judged.";
+      }
+    } else if (known4.length || seen4){
+      st4 = "exposed";
+      why4 = known4.length
+        ? "Your browser is handing out your real address, straight past the tunnel. Any page can read it in a few lines of script. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser."
+        : "Your browser is handing out an address that is not the one the tunnel presents. That address identifies your real connection. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser.";
+    } else {
+      st4 = "na";
+      why4 = "WebRTC returned an address, but the lookup failed on this run, so it cannot be judged against what sites currently see.";
+    }
+    items.push({ name:"Your address via WebRTC", weight:25,
+      was: (base.rtc4 && base.rtc4.length) ? base.rtc4.join(", ") : "none",
+      is: candidates4.length ? candidates4.join(", ") : "none",
+      state: st4, why: why4 });
 
-    if (base.rtc6.length || now.rtc6.length){
-      var leaked6 = base.rtc6.filter(function(a){ return now.rtc6.indexOf(a) > -1; });
-      items.push({
-        name:"Your IPv6 address", weight:15,
-        was: base.rtc6.join(", ") || "none",
-        is: now.rtc6.join(", ") || "none",
-        state: !base.rtc6.length ? "na" : (leaked6.length ? "exposed" : "hidden"),
-        why: !base.rtc6.length ? null : (leaked6.length
-          ? "Many VPNs route IPv4 through the tunnel and let IPv6 out over the ordinary connection. Yours appears to be doing that. Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings."
-          : "Your IPv6 address is no longer the one you started with.")
-      });
+    /* IPv6, judged by network rather than exact address. The ending rotates
+       on its own, so an exact-match test calls a rotated address "hidden"
+       while the same real network is still on display. */
+    var base6 = (base.rtc6 || []), now6 = (now.rtc6 || []);
+    if (base6.length || now6.length){
+      var basePrefixes = base6.map(prefix64);
+      var seen6 = (now.ip && String(now.ip).indexOf(":") > -1) ? now.ip : null;
+      var extra6 = now6.filter(function(a){ return a !== seen6; });
+      var sameNet = extra6.filter(function(a){ return basePrefixes.indexOf(prefix64(a)) > -1; });
+      var st6, why6;
+      if (!now6.length){
+        st6 = "hidden";
+        why6 = "Your browser is no longer giving out an IPv6 address.";
+      } else if (!extra6.length){
+        st6 = "hidden";
+        why6 = "The only IPv6 visible is the one the tunnel itself presents.";
+      } else if (sameNet.length){
+        st6 = "exposed";
+        why6 = "The IPv6 on display is from the same network as before the VPN. Only its ending changed, which happens by itself and hides nothing. Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings.";
+      } else if (!base6.length){
+        st6 = "na";
+        why6 = "An IPv6 address appeared only after the VPN connected, so it cannot be judged: it may belong to the VPN, or your connection may have gained IPv6 in between.";
+      } else {
+        st6 = "hidden";
+        why6 = "The visible IPv6 now belongs to a different network from your baseline. That usually means the tunnel provides it. Mobile networks do occasionally move their own prefixes, so if this matters to you, take a fresh baseline and run once more.";
+      }
+      items.push({ name:"Your IPv6 address", weight:15,
+        was: base6.join(", ") || "none",
+        is: now6.join(", ") || "none",
+        state: st6, why: why6 });
     }
 
     /* Shown but not scored: hiding this is not the VPN's job. */
@@ -408,7 +491,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 
     var earned=0, possible=0, exposed=[];
     items.forEach(function(i){
-      if (i.state === "na") return;
+      if (i.state !== "hidden" && i.state !== "exposed") return;
       possible += i.weight;
       if (i.state === "hidden") earned += i.weight; else exposed.push(i);
     });
@@ -420,13 +503,16 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 
   /* ---------- rendering ---------- */
   function fmt(v){ return v == null ? "—" : (v >= 100 ? v.toFixed(0) : v.toFixed(1)); }
+  /* Always phrased as a positive magnitude plus a direction word. "-13% slower"
+     states the direction twice and reads as a double negative. */
   function delta(now, was, higherBetter){
     if (now == null || was == null || !was) return { txt:"", cls:"flat" };
     var pc = (now - was)/was*100;
-    if (Math.abs(pc) < 5) return { txt:"about the same", cls:"flat" };
+    if (Math.abs(pc) < 8) return { txt:"about the same", cls:"flat" };
     var better = higherBetter ? pc > 0 : pc < 0;
-    var word = higherBetter ? (pc>0?"faster":"slower") : (pc>0?"slower":"faster");
-    return { txt:(pc>0?"+":"") + pc.toFixed(0) + "% " + word, cls: better?"up":"down" };
+    var word = higherBetter ? (pc > 0 ? "faster" : "slower")
+                            : (pc > 0 ? "higher" : "lower");
+    return { txt: Math.abs(pc).toFixed(0) + "% " + word, cls: better ? "up" : "down" };
   }
 
   function paint(base, now){
@@ -492,16 +578,36 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
     $("ulDelta").textContent=du.txt; $("ulDelta").className="d "+du.cls;
     $("ltDelta").textContent=dl.txt; $("ltDelta").className="d "+dl.cls;
 
-    var cost = (now.down!=null && base.down) ? (base.down-now.down)/base.down*100 : null;
-    $("spText").textContent = cost==null ? "Speed could not be measured"
-      : cost > 50 ? "Your VPN is costing you a lot of speed"
-      : cost > 20 ? "Your VPN costs you some speed"
-      : cost > -5 ? "Your VPN barely slows you down"
-      : "Your connection got faster";
-    $("spSub").textContent = cost==null
-      ? "The transfers did not finish. Try again on a steadier connection."
-      : "Without the VPN: " + fmt(base.down) + " Mbps down, " + fmt(base.up) + " Mbps up, " +
+    /* The headline has to answer for every number shown beneath it. Judging on
+       download alone once produced "barely slows you down" above an upload
+       that had halved and a latency that had doubled. */
+    function loss(now, was, higherBetter){
+      if (now == null || was == null || !was) return null;
+      var pc = (now - was)/was*100;
+      return higherBetter ? -pc : pc;      /* positive means worse */
+    }
+    var costs = [ loss(now.down, base.down, true),
+                  loss(now.up, base.up, true),
+                  loss(now.latency, base.latency, false) ].filter(function(v){ return v != null; });
+
+    if (!costs.length){
+      $("spText").textContent = "Speed could not be measured";
+      $("spSub").textContent = "The transfers did not finish. Try again on a steadier connection.";
+    } else {
+      var worst = Math.max.apply(null, costs);
+      var names = ["download","upload","latency"];
+      var worstName = names[[loss(now.down,base.down,true), loss(now.up,base.up,true),
+                             loss(now.latency,base.latency,false)].indexOf(worst)] || "speed";
+      $("spText").textContent =
+          worst > 50 ? "Your VPN costs you a lot, mostly in " + worstName
+        : worst > 20 ? "Your VPN has a noticeable cost in " + worstName
+        : worst > 8  ? "Your VPN costs you a little speed"
+        : worst > -8 ? "Your VPN barely slows you down"
+        : "Your connection got faster";
+      $("spSub").textContent = "Without the VPN: " + fmt(base.down) + " Mbps down, " +
+        fmt(base.up) + " Mbps up, " +
         (base.latency==null ? "—" : base.latency.toFixed(0)) + " ms latency.";
+    }
   }
 
   /* ---------- stages ---------- */

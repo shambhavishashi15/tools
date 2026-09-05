@@ -176,7 +176,7 @@ footer p{margin:0 0 6px;max-width:70ch}
 <div class="shell">
 
 <div class="hero">
-  <h1>Your exposure score</h1>
+  <h1 id="scoreLabel">Your exposure score</h1>
   <div class="readout">
     <div class="score tone-p" id="scoreNum">—<small>/100</small></div>
     <div class="verdict">
@@ -284,7 +284,7 @@ footer p{margin:0 0 6px;max-width:70ch}
     ip4:null, ip6:null, city:null, region:null, country:null,
     asn:null, org:null, apiTz:null, privacyFlags:null,
     tz:null, offset:null, rtcPublic:[], rtcLocal:[], rtcDone:false,
-    fp:{}, entropyBits:0, lookupNote:null
+    fp:{}, entropyBits:0, lookupNote:null, tunnel:null
   };
   var snapshot = null;
 
@@ -499,34 +499,112 @@ footer p{margin:0 0 6px;max-width:70ch}
       });
   }
 
+  /* ---------- is there a tunnel at all? ----------
+     No single signal proves a VPN is in use, so several weak ones are pooled.
+     This matters because the same evidence means opposite things depending on
+     the answer: an address visible with no VPN is simply how the web works,
+     while the same address visible through a VPN is a failure of that VPN. */
+  var HOSTING_RE = /\b(hosting|datacent|data cent|cloud|vpn|proxy|colo|m247|ovh|digitalocean|linode|hetzner|leaseweb|choopa|vultr|nordvpn|express ?vpn|mullvad|surfshark|private internet|cyberghost|protonvpn)\b/i;
+
+  function serverSeenIp(){ return S.ip4 || S.ip6 || null; }
+  function sameFamily(a, b){ return (a.indexOf(":") > -1) === (b.indexOf(":") > -1); }
+
+  /* Addresses WebRTC found that this site could not already see. Compared
+     within address family, because a v6 candidate alongside a v4 connection
+     is ordinary dual stack rather than anything escaping. */
+  function extraAddresses(){
+    var seen = serverSeenIp();
+    if (!seen) return [];
+    return S.rtcPublic.filter(function(a){
+      return sameFamily(a, seen) && a !== seen;
+    });
+  }
+  function otherFamily(){
+    var seen = serverSeenIp();
+    if (!seen) return [];
+    return S.rtcPublic.filter(function(a){ return !sameFamily(a, seen); });
+  }
+
+  function assessTunnel(){
+    var pts = 0, why = [];
+    if (S.apiTz && S.tz && S.apiTz !== S.tz){
+      pts += 1; why.push("your clock and your address disagree about where you are");
+    }
+    if (extraAddresses().length){
+      pts += 2; why.push("WebRTC reports an address this site cannot see");
+    }
+    if (S.org && HOSTING_RE.test(S.org)){
+      pts += 2; why.push("your address belongs to a hosting network rather than a consumer provider");
+    }
+    return { likely: pts >= 2, points: pts, why: why, known: !!serverSeenIp() };
+  }
+
   /* ---------- scoring ---------- */
   function assess(){
-    var out = [], apiUp = !!(S.ip4 || S.ip6);
+    var out = [], apiUp = !!serverSeenIp();
+    var tun = S.tunnel = assessTunnel();
+    var extra = extraAddresses(), other = otherFamily();
 
     /* WebRTC */
     if (!S.rtcDone){
       out.push({id:"webrtc",level:"skip",title:"WebRTC leak",stat:"Not run",
         sub:"The test did not complete.",body:"Reload the page to try again."});
+    } else if (extra.length && tun.likely){
+      out.push({id:"webrtc",level:"bad",title:"WebRTC leak",stat:"Leaking",weight:34,
+        sub:"Real address " + extra.join(", ") + " is escaping your tunnel",
+        body:"This is the failure this tool exists to catch. Your browser handed out an address that differs from the one this site sees, which means your real identity is reachable despite the VPN. Any page can read it with a few lines of script and no permission prompt. Disable WebRTC in your browser settings, add an extension that blocks it, or switch to a VPN client that patches the browser rather than only the system route."});
+    } else if (extra.length){
+      out.push({id:"webrtc",level:"warn",title:"WebRTC leak",stat:"Second address",weight:10,
+        sub:"WebRTC reports " + extra.join(", ") + ", which this site cannot otherwise see",
+        body:"Your browser is announcing an address different from the one your connection arrived on. With no VPN in play this usually means a second network interface or a proxy you may not know about. It is worth understanding where it comes from."});
     } else if (S.rtcPublic.length){
-      out.push({id:"webrtc",level:"bad",title:"WebRTC leak",stat:"Leaking",weight:30,
-        sub:"Public address " + S.rtcPublic.join(", ") + " is reachable by any page",
-        body:"Your browser handed out a routable address outside the VPN tunnel. A site can read this with a few lines of script and no permission prompt. Fix it by disabling WebRTC in your browser settings, installing an extension that blocks it, or using a VPN client that patches the browser rather than only the system route."});
+      out.push({id:"webrtc",level:"ok",title:"WebRTC leak",stat:"Nothing extra",
+        sub:"WebRTC reported the same address this site already sees",
+        body:"WebRTC did return your address, but it is the one you connected with, so nothing was revealed that was not already visible. This is the expected result." +
+             (tun.likely ? " Your tunnel is holding." : " Without a VPN there is nothing here to hide behind, and that is normal.")});
     } else if (S.rtcLocal.length){
-      out.push({id:"webrtc",level:"warn",title:"WebRTC leak",stat:"Partial",weight:8,
-        sub:"Local network address " + S.rtcLocal.join(", ") + " exposed",
-        body:"Only a private address escaped, so your public identity is safe. This still tells a site how your home network is laid out and can help distinguish you from other visitors."});
+      out.push({id:"webrtc",level:"warn",title:"WebRTC leak",stat:"Local only",weight:5,
+        sub:"Private address " + S.rtcLocal.join(", ") + " exposed",
+        body:"Only an internal address escaped, so your public identity is safe. This still describes how your home network is laid out and helps distinguish you from other visitors."});
     } else {
-      out.push({id:"webrtc",level:"ok",title:"WebRTC leak",stat:"Clean",
-        sub:"No routable address escaped the tunnel",
-        body:"Either WebRTC is disabled, your browser replaced the address with an mDNS placeholder, or the tunnel is holding. This is the behaviour you want."});
+      out.push({id:"webrtc",level:"ok",title:"WebRTC leak",stat:"Blocked",
+        sub:"No address escaped through WebRTC",
+        body:"Either WebRTC is disabled or your browser replaced the address with a placeholder. This is the strongest possible result."});
     }
 
-    /* Timezone versus IP country */
+    /* Second address family */
+    if (other.length){
+      out.push({id:"dual",level:"warn",title:"Second address family",stat:"Dual stack",weight:5,
+        sub:"Also reachable at " + other.join(", "),
+        body:"Your connection arrived over one address family but another is reachable too. Plenty of VPN clients tunnel IPv4 correctly and let IPv6 out over the ordinary connection, so if you rely on a VPN, check whether it tunnels or blocks IPv6."});
+    }
+
+    /* Tunnel verdict */
+    if (apiUp){
+      if (tun.likely){
+        out.push({id:"vpn",level:"info",title:"Connection routing",stat:"Tunnel detected",
+          sub:"Signals suggest a VPN or proxy is in use",
+          body:"Detected because " + tun.why.join("; ") + ". A site can run these same comparisons, so a VPN hides where you are without hiding that you are using one. That distinction matters if you are trying to blend in rather than simply stay private."});
+      } else {
+        out.push({id:"vpn",level:"info",title:"Connection routing",stat:"Direct",
+          sub:"No VPN or proxy detected" + (S.org ? " \u00b7 " + S.org : ""),
+          body:"You appear to be connecting directly through a consumer provider. Nothing is wrong with this. It does mean your address identifies your provider and approximate area, and your provider can associate it with your account, so the rest of this report describes what is visible rather than what is broken."});
+      }
+    } else {
+      out.push({id:"vpn",level:"skip",title:"Connection routing",stat:"Needs lookup",
+        sub:"Address lookup did not complete",
+        body:"This check needs the address lookup to return first."});
+    }
+
+    /* Timezone versus address */
     if (apiUp && S.apiTz && S.tz){
       if (S.apiTz !== S.tz){
-        out.push({id:"tz",level:"warn",title:"Timezone mismatch",stat:"Mismatch",weight:14,
+        out.push({id:"tz",level:"warn",title:"Timezone mismatch",stat:"Mismatch",
+          weight: tun.likely ? 14 : 6,
           sub:"Browser reports " + S.tz + ", your address maps to " + S.apiTz,
-          body:"Your VPN moved your address but not your clock. Any site can compare the two in one line of script and conclude you are using a VPN, plus narrow down where you actually are. Some browsers and privacy extensions can spoof the reported timezone to match your exit country."});
+          body: tun.likely
+            ? "Your VPN moved your address but not your clock. Any site can compare the two in a single line of script, conclude you are on a VPN, and narrow down your real region. Some browsers and privacy extensions can spoof the reported timezone to match your exit country."
+            : "Your clock and your address disagree even though no VPN was detected. This happens when travelling, when the system clock is set manually, or when your provider routes you through another region. It is a small inconsistency that makes you slightly more identifiable."});
       } else {
         out.push({id:"tz",level:"ok",title:"Timezone mismatch",stat:"Consistent",
           sub:"Clock and address agree on " + S.tz,
@@ -535,68 +613,48 @@ footer p{margin:0 0 6px;max-width:70ch}
     } else {
       out.push({id:"tz",level:"skip",title:"Timezone mismatch",stat:"Needs lookup",
         sub:"Cannot compare without a completed address lookup",
-        body:"This check compares your system clock against the country your address belongs to."});
+        body:"This check compares your system clock against the region your address belongs to."});
     }
 
-    /* Proxy / VPN detection */
-    if (apiUp){
-      out.push({id:"vpn",level:"info",title:"Proxy and VPN detection",stat:"See detail",
-        sub:(S.org ? S.org : "Network operator unknown") + (S.country ? " \u00b7 " + S.country : ""),
-        body:"Commercial detection services grade your address block by whether it belongs to a hosting company rather than a consumer provider. If the operator above is a datacentre or a known VPN brand, sites can tell you are on a VPN even though they cannot see through it. Wire your paid provider's flags in here to turn this into a pass or fail."});
-    } else {
-      out.push({id:"vpn",level:"skip",title:"Proxy and VPN detection",stat:"Needs lookup",
-        sub:"Address lookup did not complete",
-        body:"This check needs the address lookup to return first."});
-    }
-
-    /* DNS — honest placeholder */
+    /* DNS */
     out.push({id:"dns",level:"skip",title:"DNS leak",stat:"Not yet built",
       sub:"Requires resolver-side infrastructure",
-      body:"A real DNS leak test resolves several unique one-off hostnames against nameservers you control, then reports which resolvers asked for them. That needs a domain with custom nameservers and a small logging service, so it cannot run purely in the browser. Marked as pending rather than faked."});
+      body:"A real DNS leak test resolves several unique one-off hostnames against nameservers under our control, then reports which resolvers asked for them. That needs a domain with custom nameservers and a small logging service, so it cannot run in the browser alone. Marked as pending rather than faked."});
 
-    /* Fingerprint surface */
+    /* Fingerprint surface: independent of any tunnel, since a VPN does nothing here */
     var bits = S.entropyBits;
     if (bits >= 34){
       out.push({id:"fp",level:"bad",title:"Fingerprint surface",stat:"Highly distinctive",weight:18,
         sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
-        body:"Your browser gives away enough combined detail to be recognised across sites without any cookie. Canvas and WebGL readings are the largest contributors. A hardened browser or a resist-fingerprinting setting reduces this substantially."});
+        body:"Your browser gives away enough combined detail to be recognised across sites with no cookie at all. Canvas and graphics readings are the largest contributors. A VPN does nothing about any of this. A hardened browser or a resist-fingerprinting setting reduces it substantially."});
     } else if (bits >= 22){
       out.push({id:"fp",level:"warn",title:"Fingerprint surface",stat:"Moderate",weight:9,
         sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
-        body:"You are not trivially unique, but a determined tracker combining these signals could still single you out within a large group."});
+        body:"You are not trivially unique, but a tracker combining these signals could still single you out within a large group."});
     } else {
       out.push({id:"fp",level:"ok",title:"Fingerprint surface",stat:"Restrained",
         sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
         body:"Your browser is withholding the readings that usually make fingerprints stick."});
     }
 
-    /* Canvas */
     if (S.fp.canvas){
       out.push({id:"canvas",level:"warn",title:"Canvas fingerprinting",stat:"Readable",weight:7,
         sub:"Stable signature " + S.fp.canvas + " returned",
-        body:"Asked to draw the same hidden image, your graphics stack produces a result specific to your device and drivers. It stays the same across visits and across sites, which makes it a durable identifier."});
+        body:"Asked to draw the same hidden image, your graphics stack produces a result specific to your device and drivers. It stays the same across visits and across sites, which makes it a durable identifier that survives clearing cookies."});
     } else {
       out.push({id:"canvas",level:"ok",title:"Canvas fingerprinting",stat:"Blocked",
         sub:"No stable signature returned",
         body:"Your browser is blocking or randomising canvas reads."});
     }
 
-    /* WebGL */
     if (S.fp.webgl){
       out.push({id:"webgl",level:"warn",title:"Graphics hardware",stat:"Exposed",weight:6,
         sub:S.fp.webgl,
-        body:"Your exact graphics adapter is readable. Combined with screen size and font list it narrows you down sharply, and unlike an IP address a VPN does nothing about it."});
+        body:"Your exact graphics adapter is readable. Combined with screen size and font list it narrows you down sharply, and no VPN affects it."});
     } else {
       out.push({id:"webgl",level:"ok",title:"Graphics hardware",stat:"Masked",
         sub:"Adapter details withheld",
         body:"Your browser is not handing out the adapter string."});
-    }
-
-    /* IPv6 alongside IPv4 */
-    if (S.ip4 && S.ip6){
-      out.push({id:"dual",level:"warn",title:"IPv6 exposure",stat:"Dual stack",weight:6,
-        sub:"Both address families are reachable",
-        body:"Plenty of VPN clients tunnel IPv4 correctly and let IPv6 traffic go out over the ordinary connection. If both are visible, check whether your provider actually tunnels or blocks IPv6."});
     }
 
     return out;
@@ -663,20 +721,33 @@ footer p{margin:0 0 6px;max-width:70ch}
     meter.className = "meter tone-" + tone;
 
     var issues = bad + warn;
+    var tun = S.tunnel || { likely:false, known:false };
+    var lead;
+    if (!tun.known){
+      lead = "Address lookup did not complete, so this score covers your browser only. ";
+    } else if (tun.likely){
+      lead = bad
+        ? "Your VPN is not covering everything. "
+        : "A VPN or proxy is in use and holding. ";
+    } else {
+      lead = bad
+        ? "You are connecting directly, with no VPN. "
+        : "You are connecting directly, with no VPN, which is normal. ";
+    }
     $("verdictText").textContent = issues === 0
-      ? "Nothing leaked in these checks. Your address and your browser are telling the same story."
-      : issues + (issues === 1 ? " issue found. " : " issues found. ") +
-        (bad ? "Your real address is escaping the tunnel. " : "") +
-        "Open any row below for what it means and how to fix it.";
+      ? lead + "Nothing in these checks contradicts anything else."
+      : lead + issues + (issues === 1 ? " thing worth knowing about. " : " things worth knowing about. ") +
+        "Open any row for what it means and what to do.";
 
     var t = $("tally");
     t.innerHTML = "";
-    [[bad,"d","leak"],[warn,"w","warning"],[ok,"p","passed"]].forEach(function(p){
+    var severeWord = tun.likely ? "leak" : "exposure";
+    [[bad,"d",severeWord],[warn,"w","warning"],[ok,"p","passed"]].forEach(function(p){
       if (!p[0]) return;
-      var s = document.createElement("span");
-      s.className = "chip " + p[1];
-      s.textContent = p[0] + " " + p[2] + (p[0] > 1 && p[2] !== "passed" ? "s" : "");
-      t.appendChild(s);
+      var el = document.createElement("span");
+      el.className = "chip " + p[1];
+      el.textContent = p[0] + " " + p[2] + (p[0] > 1 && p[2] !== "passed" ? "s" : "");
+      t.appendChild(el);
     });
     $("brandDot").style.background = "var(--" + (tone === "p" ? "pass" : tone === "w" ? "warn" : "danger") + ")";
   }

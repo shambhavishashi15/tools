@@ -284,7 +284,7 @@ footer p{margin:0 0 6px;max-width:70ch}
     ip4:null, ip6:null, city:null, region:null, country:null,
     asn:null, org:null, apiTz:null, privacyFlags:null,
     tz:null, offset:null, rtcPublic:[], rtcLocal:[], rtcDone:false,
-    fp:{}, entropyBits:0
+    fp:{}, entropyBits:0, lookupNote:null
   };
   var snapshot = null;
 
@@ -452,21 +452,34 @@ footer p{margin:0 0 6px;max-width:70ch}
   }
 
   /* ---------- IP + geolocation lookup ----------
-     Swap this endpoint for your own /api/ip serverless function once deployed,
-     so your provider key stays server-side and you control caching. */
+     Calls our own serverless function, so the provider token stays server-side.
+     Note: this returns whichever address family the browser happened to connect
+     over. Detecting a genuine dual stack needs two separate hostnames pinned to
+     A-only and AAAA-only records; see the notes before enabling that check. */
+  var LOOKUP_ERRORS = {
+    token_missing:"Server is missing its provider token",
+    rate_limited:"Provider rate limit reached",
+    provider_error:"Provider returned an error",
+    timeout:"Provider timed out",
+    network_error:"Could not reach the provider",
+    no_client_ip:"Address could not be determined"
+  };
+
   function lookup(){
-    return fetch("https://ipapi.co/json/", { cache:"no-store" })
-      .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.json(); })
+    return fetch("/api/ip", { cache:"no-store", headers:{ Accept:"application/json" } })
+      .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.error) throw new Error(d.reason || "lookup failed");
         var ip = d.ip || null;
         if (ip && ip.indexOf(":") > -1) S.ip6 = ip; else S.ip4 = ip;
         S.city = d.city || null;
         S.region = d.region || null;
-        S.country = d.country_name || d.country || null;
+        S.country = d.countryName || d.country || null;
         S.asn = d.asn || null;
         S.org = d.org || null;
         S.apiTz = d.timezone || null;
+        if (d.lookup && d.lookup !== "ok"){
+          S.lookupNote = LOOKUP_ERRORS[d.lookup] || "Lookup unavailable";
+        }
       });
   }
 
@@ -582,9 +595,10 @@ footer p{margin:0 0 6px;max-width:70ch}
     }
     set("ip4", S.ip4, "Not detected");
     set("ip6", S.ip6, "Not detected");
-    set("isp", S.org ? (S.org + (S.asn ? " \u00b7 " + S.asn : "")) : null, "Unavailable");
+    var fallback = S.lookupNote || "Unavailable";
+    set("isp", S.org ? (S.org + (S.asn ? " \u00b7 " + S.asn : "")) : null, fallback);
     var place = [S.city, S.region, S.country].filter(Boolean).join(", ");
-    set("loc", place || null, "Unavailable");
+    set("loc", place || null, fallback);
   }
 
   function paintFindings(list){

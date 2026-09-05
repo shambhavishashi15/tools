@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,137 +7,191 @@
 <meta name="description" content="Check whether your VPN is actually hiding your identity, how much of your data it conceals, and how much download and upload speed it costs you. Free, no ads, nothing logged.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#F4F3F0; --surface:#FFFFFF; --raised:#FAF9F7;
-  --ink:#16181C; --slate:#5C636D; --faint:#8A919B;
-  --rule:#E2E0DB; --rule-firm:#CBC8C1;
-  --danger:#B4322A; --danger-bg:#FBEDEB;
-  --warn:#9A6208; --warn-bg:#FAF2E2;
-  --pass:#2C6249; --pass-bg:#EAF2ED;
-  --mark:#2F4B8F;
+  --bg:#0A0E14; --surface:#10151D; --raised:#161D27;
+  --ink:#E8EDF4; --slate:#95A1B2; --faint:#5D6977;
+  --rule:#1E2733; --rule-firm:#2D3948;
+  --amber:#FFB224; --amber-ink:#0A0E14;
+  --danger:#F0655C; --danger-bg:rgba(240,101,92,.12);
+  --warn:#FFB224; --warn-bg:rgba(255,178,36,.10);
+  --pass:#48C892; --pass-bg:rgba(72,200,146,.11);
+  --mark:#6AA6FF;
+  --glow:rgba(255,178,36,.07);
 }
-[data-theme="dark"]{
-  --paper:#131519; --surface:#1B1E24; --raised:#22262D;
-  --ink:#E9E8E4; --slate:#A2A9B4; --faint:#727A86;
-  --rule:#2C313A; --rule-firm:#3D444F;
-  --danger:#F08C84; --danger-bg:#33201E;
-  --warn:#E5B45F; --warn-bg:#302719;
-  --pass:#79C6A2; --pass-bg:#182A22;
-  --mark:#93B0F0;
+[data-theme="light"]{
+  --bg:#F2F1EC; --surface:#FFFFFF; --raised:#F8F7F4;
+  --ink:#161A20; --slate:#5A636E; --faint:#8B939E;
+  --rule:#E1DFD8; --rule-firm:#C9C6BE;
+  --amber:#B87708; --amber-ink:#FFFFFF;
+  --danger:#B4322A; --danger-bg:rgba(180,50,42,.09);
+  --warn:#96600A; --warn-bg:rgba(150,96,10,.10);
+  --pass:#2C6249; --pass-bg:rgba(44,98,73,.10);
+  --mark:#2F4B8F;
+  --glow:rgba(184,119,8,.05);
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
-  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
-.shell{max-width:760px;margin:0 auto;padding:0 22px}
-:focus-visible{outline:2px solid var(--mark);outline-offset:2px;border-radius:3px}
-
-.mast{border-bottom:1px solid var(--rule);background:var(--surface)}
-.mast .shell{display:flex;align-items:center;justify-content:space-between;height:58px}
-.brand{font-weight:500;font-size:15px;letter-spacing:-.01em}
-.tbtn{border:1px solid var(--rule-firm);background:transparent;color:var(--slate);
-  border-radius:6px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
-.tbtn:hover{border-color:var(--ink);color:var(--ink)}
-
-h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
-.lede{color:var(--slate);margin:0 0 26px;font-size:15.5px;max-width:58ch}
-
-.stage{background:var(--surface);border:1px solid var(--rule-firm);border-radius:10px;
-  padding:20px 22px;margin-bottom:22px}
-.stage .step{font-size:13px;color:var(--faint);margin:0 0 4px;letter-spacing:.02em}
-.stage h2{font-size:18px;font-weight:500;margin:0 0 6px;letter-spacing:-.01em}
-.stage p.txt{margin:0 0 16px;color:var(--slate);font-size:14.5px;max-width:58ch}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:7px;
-  padding:10px 18px;font:inherit;font-size:14.5px;font-weight:500;cursor:pointer}
-.btn:hover:not(:disabled){opacity:.86}
-.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule-firm)}
-.btn.ghost:hover:not(:disabled){border-color:var(--ink);opacity:1}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.hint{font-size:13.5px;color:var(--faint)}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;color:var(--ink);background:var(--bg);
+  font-family:"Space Grotesk",system-ui,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(ellipse 90% 42% at 50% -8%, var(--glow), transparent),
+    repeating-linear-gradient(0deg, transparent 0 47px, var(--rule) 47px 48px),
+    repeating-linear-gradient(90deg, transparent 0 47px, var(--rule) 47px 48px);
+  background-attachment:fixed;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.shell{max-width:780px;margin:0 auto;padding:0 22px}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
 .hidden{display:none!important}
 
-.card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;
-  margin-bottom:16px;overflow:hidden}
-.chead{padding:20px 22px}
-.ctitle{font-size:12.5px;color:var(--slate);margin:0 0 14px;letter-spacing:.06em;text-transform:uppercase}
+/* ---------- masthead ---------- */
+.mast{border-bottom:1px solid var(--rule);background:color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter:blur(6px);position:sticky;top:0;z-index:5}
+.mast .shell{display:flex;align-items:center;justify-content:space-between;height:58px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"IBM Plex Mono",monospace;
+  font-size:14px;letter-spacing:.08em;font-weight:500}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--amber);position:relative;flex:none}
+.pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;
+  border:1px solid var(--amber);opacity:0;animation:ripple 2.4s ease-out infinite}
+@keyframes ripple{0%{transform:scale(.5);opacity:.7}70%{transform:scale(1.5);opacity:0}100%{opacity:0}}
+.tbtn{border:1px solid var(--rule-firm);background:transparent;color:var(--slate);
+  border-radius:6px;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}
+.tbtn:hover{border-color:var(--ink);color:var(--ink)}
 
-.verdict{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
-.vdot{width:13px;height:13px;border-radius:50%;flex:none;margin-top:8px}
-.vtext{font-size:22px;font-weight:500;letter-spacing:-.015em;margin:0}
-.vsub{font-size:14.5px;color:var(--slate);margin:3px 0 0;max-width:56ch}
+/* ---------- intro ---------- */
+h1{font-size:clamp(26px,5.4vw,38px);font-weight:600;letter-spacing:-.025em;
+  line-height:1.12;margin:44px 0 12px}
+h1 em{font-style:normal;color:var(--amber)}
+.lede{color:var(--slate);margin:0 0 30px;font-size:16px;max-width:58ch;line-height:1.65}
 
-.hidebar .lbl{display:flex;justify-content:space-between;align-items:baseline;
-  font-size:14px;color:var(--slate);margin-bottom:8px}
-.hidebar .lbl b{font-size:26px;font-weight:500;color:var(--ink);letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums}
-.track{height:10px;background:var(--rule);border-radius:5px;overflow:hidden}
-.fill{height:100%;width:0;border-radius:5px;transition:width .6s ease}
-.fill.p{background:var(--pass)} .fill.w{background:var(--warn)} .fill.d{background:var(--danger)}
+/* ---------- stage console ---------- */
+.stage{background:var(--surface);border:1px solid var(--rule-firm);border-radius:12px;
+  padding:22px 24px;margin-bottom:24px;position:relative;overflow:hidden}
+.stage::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber)}
+.stage .step{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--amber);
+  letter-spacing:.14em;text-transform:uppercase;margin:0 0 6px}
+.stage h2{font-size:20px;font-weight:600;margin:0 0 7px;letter-spacing:-.015em}
+.stage p.txt{margin:0 0 18px;color:var(--slate);font-size:14.5px;max-width:58ch}
+.scanline{position:absolute;left:0;right:0;bottom:0;height:2px;opacity:0;pointer-events:none}
+.stage.measuring .scanline{opacity:1;background:linear-gradient(90deg,transparent,var(--amber),transparent);
+  background-size:40% 100%;background-repeat:no-repeat;animation:sweep 1.6s ease-in-out infinite}
+@keyframes sweep{0%{background-position:-40% 0}100%{background-position:140% 0}}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--amber);background:var(--amber);color:var(--amber-ink);border-radius:8px;
+  padding:11px 20px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;letter-spacing:-.01em}
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule-firm);font-weight:500}
+.btn.ghost:hover:not(:disabled){border-color:var(--ink);filter:none}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:13.5px;color:var(--faint);font-family:"IBM Plex Mono",monospace}
 
-.speeds{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
-  background:var(--rule);border-top:1px solid var(--rule)}
-.sp{background:var(--surface);padding:16px 18px}
-.sp .k{font-size:13px;color:var(--slate);margin:0 0 6px}
-.sp .v{font-size:22px;font-weight:500;margin:0;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.sp .v small{font-size:13px;font-weight:400;color:var(--faint);margin-left:3px}
-.sp .d{font-size:13.5px;margin:3px 0 0}
-.d.up{color:var(--pass)} .d.down{color:var(--danger)} .d.flat{color:var(--faint)}
+/* ---------- cards ---------- */
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+  margin-bottom:18px;overflow:hidden}
+.chead{padding:22px 24px}
+.ctitle{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--amber);
+  margin:0 0 18px;letter-spacing:.16em;text-transform:uppercase}
 
-.drawer{border-top:1px solid var(--rule)}
-.dtoggle{width:100%;background:none;border:0;font:inherit;color:var(--slate);
-  padding:13px 22px;text-align:left;cursor:pointer;display:flex;align-items:center;
-  justify-content:space-between;font-size:14px}
-.dtoggle:hover{background:var(--raised);color:var(--ink)}
-.dtoggle .car{transition:transform .18s ease;font-size:12px}
-.drawer.open .car{transform:rotate(90deg)}
-.dbody{display:none;padding:2px 22px 20px}
-.drawer.open .dbody{display:block}
+.vwrap{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.gauge{position:relative;width:128px;height:128px;flex:none}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.gtrack{fill:none;stroke:var(--rule);stroke-width:9}
+.gfill{fill:none;stroke-width:9;stroke-linecap:round;
+  stroke-dasharray:326.7;stroke-dashoffset:326.7;
+  transition:stroke-dashoffset .9s cubic-bezier(.2,.7,.3,1)}
+.gfill.p{stroke:var(--pass)} .gfill.w{stroke:var(--warn)} .gfill.d{stroke:var(--danger)}
+.gval{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px}
+.gval b{font-size:29px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.gval span{font-size:10.5px;color:var(--faint);font-family:"IBM Plex Mono",monospace;
+  letter-spacing:.08em;text-transform:uppercase}
+.vmain{flex:1;min-width:230px}
+.verdict{display:flex;align-items:flex-start;gap:12px}
+.vdot{width:12px;height:12px;border-radius:50%;flex:none;margin-top:9px;
+  box-shadow:0 0 12px currentColor}
+.vtext{font-size:24px;font-weight:600;letter-spacing:-.02em;margin:0;line-height:1.25}
+.vsub{font-size:14.5px;color:var(--slate);margin:5px 0 0;max-width:50ch}
 
-.item{padding:14px 0;border-bottom:1px solid var(--rule)}
-.item:last-child{border-bottom:0}
-.itop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.itop .nm{font-size:14.5px;font-weight:500;flex:1;min-width:150px}
-.pill{font-size:12px;font-weight:500;padding:2px 9px;border-radius:4px;white-space:nowrap}
-.pill.p{background:var(--pass-bg);color:var(--pass)}
-.pill.d{background:var(--danger-bg);color:var(--danger)}
-.pill.n{background:var(--rule);color:var(--slate)}
-.vals{font-size:13.5px;color:var(--slate);margin:6px 0 0;
-  font-family:"IBM Plex Mono",ui-monospace,monospace;word-break:break-all;line-height:1.55}
-.vals .arrow{color:var(--faint);padding:0 6px}
-.why{font-size:13.5px;color:var(--slate);margin:6px 0 0;max-width:62ch}
-
-.risk{background:var(--danger-bg);border-radius:8px;padding:14px 16px;margin-top:18px}
-.risk.warn{background:var(--warn-bg)}
-.risk p{margin:0;font-size:14px;color:var(--danger);max-width:62ch}
+.risk{border:1px solid var(--danger);background:var(--danger-bg);border-radius:9px;
+  padding:14px 16px;margin-top:20px}
+.risk.warn{border-color:var(--warn);background:var(--warn-bg)}
+.risk p{margin:0;font-size:14px;color:var(--danger);max-width:64ch;line-height:1.55}
 .risk.warn p{color:var(--warn)}
 
-.foot{padding:26px 0 50px;color:var(--faint);font-size:13.5px}
-.foot p{margin:0 0 8px;max-width:66ch}
-.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);
+/* ---------- drawer ---------- */
+.drawer{border-top:1px solid var(--rule)}
+.dtoggle{width:100%;background:none;border:0;font:inherit;color:var(--slate);
+  padding:14px 24px;text-align:left;cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;font-size:14px;letter-spacing:.01em}
+.dtoggle:hover{background:var(--raised);color:var(--ink)}
+.dtoggle .car{transition:transform .18s ease;font-size:13px;color:var(--amber)}
+.drawer.open .car{transform:rotate(90deg)}
+.dbody{display:none;padding:2px 24px 22px}
+.drawer.open .dbody{display:block}
+.item{padding:15px 0 15px 14px;border-bottom:1px solid var(--rule);position:relative}
+.item::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:2px;
+  background:var(--rule-firm);border-radius:1px}
+.item:last-child{border-bottom:0}
+.itop{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.itop .nm{font-size:15px;font-weight:500;flex:1;min-width:150px}
+.pill{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:500;
+  padding:3px 10px;border-radius:4px;white-space:nowrap;letter-spacing:.05em;text-transform:uppercase}
+.pill.p{background:var(--pass-bg);color:var(--pass)}
+.pill.d{background:var(--danger-bg);color:var(--danger)}
+.pill.n{background:var(--raised);color:var(--slate);border:1px solid var(--rule)}
+.vals{font-size:13px;color:var(--slate);margin:7px 0 0;
+  font-family:"IBM Plex Mono",monospace;word-break:break-all;line-height:1.6}
+.vals .arrow{color:var(--amber);padding:0 7px}
+.why{font-size:13.5px;color:var(--slate);margin:7px 0 0;max-width:62ch;line-height:1.6}
+
+/* ---------- speed ---------- */
+.speeds{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
+  background:var(--rule);border-top:1px solid var(--rule)}
+.sp{background:var(--surface);padding:18px 20px}
+.sp .k{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);
+  margin:0 0 8px;letter-spacing:.1em;text-transform:uppercase}
+.sp .v{font-size:27px;font-weight:600;margin:0;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;font-family:"IBM Plex Mono",monospace}
+.sp .v small{font-size:12px;font-weight:400;color:var(--faint);margin-left:4px;letter-spacing:0}
+.sp .d{font-size:13px;margin:5px 0 0;font-family:"IBM Plex Mono",monospace}
+.d.up{color:var(--pass)} .d.down{color:var(--danger)} .d.flat{color:var(--faint)}
+
+/* ---------- footer ---------- */
+.foot{padding:30px 0 56px;color:var(--faint);font-size:13.5px}
+.foot p{margin:0 0 9px;max-width:68ch;line-height:1.65}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.25);
   border-top-color:currentColor;border-radius:50%;animation:sp .7s linear infinite;
   vertical-align:-2px;margin-right:8px}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-@media(max-width:520px){h1{font-size:22px}.vtext{font-size:19px}}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+  .pulse::after{display:none}
+}
+@media(max-width:560px){
+  .vwrap{gap:18px}
+  .vtext{font-size:20px}
+  h1{margin-top:32px}
+}
 </style>
 </head>
 <body>
 
 <header class="mast">
   <div class="shell">
-    <span class="brand">VPN check</span>
-    <button class="tbtn" id="themeBtn">Dark</button>
+    <span class="brand"><span class="pulse" aria-hidden="true"></span>VPN&middot;CHECK</span>
+    <button class="tbtn" id="themeBtn">Light</button>
   </div>
 </header>
 
 <div class="shell">
-  <h1>Is your VPN actually working?</h1>
+  <h1>Is your VPN <em>actually</em> working?</h1>
   <p class="lede">Other tools show you one reading and leave you to guess. This one measures your connection twice, before and after, so it can tell you what your VPN really hides and what it costs you in speed.</p>
 
-  <div class="stage">
+  <div class="stage" id="stageBox">
     <p class="step" id="stepLabel">Step 1 of 2</p>
     <h2 id="stageTitle">Start with your VPN turned off</h2>
     <p class="txt" id="stageText">We need a picture of your ordinary connection first. Make sure your VPN is disconnected, then take the baseline.</p>
@@ -146,21 +200,29 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
       <button class="btn ghost hidden" id="resetBtn">Start over</button>
       <span class="hint" id="stageHint"></span>
     </div>
+    <div class="scanline" aria-hidden="true"></div>
   </div>
 
   <div class="card hidden" id="vpnCard">
     <div class="chead">
       <p class="ctitle">Is it working</p>
-      <div class="verdict">
-        <span class="vdot" id="vDot"></span>
-        <div>
-          <p class="vtext" id="vText">—</p>
-          <p class="vsub" id="vSub"></p>
+      <div class="vwrap">
+        <div class="gauge" aria-hidden="false">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Share of identifying details hidden">
+            <circle class="gtrack" cx="60" cy="60" r="52"></circle>
+            <circle class="gfill" id="gaugeFill" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="gval"><b id="hidePct">&mdash;</b><span>hidden</span></div>
         </div>
-      </div>
-      <div class="hidebar">
-        <div class="lbl"><span>Identifying details now hidden</span><b id="hidePct">—</b></div>
-        <div class="track"><div class="fill" id="hideFill"></div></div>
+        <div class="vmain">
+          <div class="verdict">
+            <span class="vdot" id="vDot"></span>
+            <div>
+              <p class="vtext" id="vText">&mdash;</p>
+              <p class="vsub" id="vSub"></p>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="riskBox"></div>
     </div>
@@ -175,13 +237,13 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
   <div class="card hidden" id="speedCard">
     <div class="chead">
       <p class="ctitle">What it costs you</p>
-      <p class="vtext" id="spText">—</p>
+      <p class="vtext" id="spText">&mdash;</p>
       <p class="vsub" id="spSub"></p>
     </div>
     <div class="speeds">
-      <div class="sp"><p class="k">Download</p><p class="v" id="dlNow">—</p><p class="d" id="dlDelta"></p></div>
-      <div class="sp"><p class="k">Upload</p><p class="v" id="ulNow">—</p><p class="d" id="ulDelta"></p></div>
-      <div class="sp"><p class="k">Latency</p><p class="v" id="ltNow">—</p><p class="d" id="ltDelta"></p></div>
+      <div class="sp"><p class="k">Download</p><p class="v" id="dlNow">&mdash;</p><p class="d" id="dlDelta"></p></div>
+      <div class="sp"><p class="k">Upload</p><p class="v" id="ulNow">&mdash;</p><p class="d" id="ulDelta"></p></div>
+      <div class="sp"><p class="k">Latency</p><p class="v" id="ltNow">&mdash;</p><p class="d" id="ltDelta"></p></div>
     </div>
   </div>
 
@@ -193,6 +255,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 </div>
 
 <script>
+
 (function(){
   "use strict";
   var $ = function(id){ return document.getElementById(id); };
@@ -222,7 +285,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 
   var root=document.documentElement, tb=$("themeBtn");
   function theme(t){ root.setAttribute("data-theme",t); tb.textContent = t==="dark"?"Light":"Dark"; }
-  if (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) theme("dark");
+  theme(window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
   tb.addEventListener("click",function(){ theme(root.getAttribute("data-theme")==="dark"?"light":"dark"); });
 
   /* ---------- measurement ---------- */
@@ -331,13 +394,18 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
       .catch(function(){ return null; });
   }
 
-  function scan(){
+  function scan(phase){
+    var say = function(m){ if (phase){ try{ phase(m); }catch(e){} } };
+    say("Warming up the line\u2026");
     return warmup().then(function(){
+      say("Reading what sites can see about you\u2026");
       return Promise.all([identity(), webrtc(), latency()]).then(function(r){
         var lat = r[2];
         /* Transfers run last and one at a time so they do not compete with the
            lookups, or with each other, for the same bandwidth. */
+        say("Measuring download speed\u2026");
         return download(lat).then(function(dl){
+          say("Measuring upload speed\u2026");
           return upload(lat).then(function(ul){
             var id = r[0] || {}, rtc = r[1];
             return {
@@ -536,9 +604,9 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
       : cmp.exposed.length + (cmp.exposed.length===1 ? " thing is" : " things are") + " still visible.";
 
     $("hidePct").textContent = cmp.pct + "%";
-    var fill = $("hideFill");
-    fill.className = "fill " + (cmp.pct>=80 ? "p" : cmp.pct>=40 ? "w" : "d");
-    fill.style.width = cmp.pct + "%";
+    var ring = $("gaugeFill");
+    ring.setAttribute("class", "gfill " + (cmp.pct>=80 ? "p" : cmp.pct>=40 ? "w" : "d"));
+    ring.style.strokeDashoffset = String((2*Math.PI*52) * (1 - cmp.pct/100));
 
     var risk = "";
     if (none && cmp.measured){
@@ -645,8 +713,9 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
     b.disabled=true; r.disabled=true;
     b.innerHTML='<span class="spin"></span>Measuring&hellip;';
     $("stageHint").textContent="This takes about fifteen seconds.";
+    $("stageBox").classList.add("measuring");
 
-    scan().then(function(now){
+    scan(function(m){ $("stageHint").textContent = m; }).then(function(now){
       var base=loadBase();
       if(!base){
         store.set(KEY, JSON.stringify(now));
@@ -662,6 +731,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
       setStage(loadBase() ? "ready" : "empty");
     }).then(function(){
       busy=false; b.disabled=false; r.disabled=false;
+      $("stageBox").classList.remove("measuring");
     });
   }
 
@@ -680,6 +750,7 @@ h1{font-size:26px;font-weight:500;letter-spacing:-.02em;margin:34px 0 8px}
 
   setStage(loadBase() ? "ready" : "empty");
 })();
+
 </script>
 </body>
 </html>

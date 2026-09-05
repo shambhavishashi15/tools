@@ -467,7 +467,15 @@ footer p{margin:0 0 6px;max-width:70ch}
 
   function lookup(){
     return fetch("/api/ip", { cache:"no-store", headers:{ Accept:"application/json" } })
-      .then(function(r){ return r.json(); })
+      .then(function(r){
+        var ct = r.headers.get("content-type") || "";
+        if (ct.indexOf("json") < 0){
+          /* An HTML body here means the function did not run: usually a 404
+             because the file is in the wrong place, or a 500 from a crash. */
+          throw new Error(r.status === 404 ? "endpoint_missing" : "endpoint_error_" + r.status);
+        }
+        return r.json();
+      })
       .then(function(d){
         var ip = d.ip || null;
         if (ip && ip.indexOf(":") > -1) S.ip6 = ip; else S.ip4 = ip;
@@ -480,6 +488,14 @@ footer p{margin:0 0 6px;max-width:70ch}
         if (d.lookup && d.lookup !== "ok"){
           S.lookupNote = LOOKUP_ERRORS[d.lookup] || "Lookup unavailable";
         }
+      })
+      .catch(function(err){
+        var m = String(err && err.message || "");
+        S.lookupNote = m === "endpoint_missing"
+          ? "API endpoint not found"
+          : (m.indexOf("endpoint_error_") === 0
+              ? "API returned " + m.split("_").pop()
+              : "Could not reach the API");
       });
   }
 
@@ -730,7 +746,7 @@ footer p{margin:0 0 6px;max-width:70ch}
     btn.textContent = "Re-checking…";
     S.rtcPublic = []; S.rtcLocal = []; S.rtcDone = false;
     Promise.all([
-      lookup().catch(function(){}),
+      lookup(),
       webrtcTest()
     ]).then(function(){
       paintIdentity();
@@ -783,7 +799,7 @@ footer p{margin:0 0 6px;max-width:70ch}
   /* ---------- run ---------- */
   paintFingerprint();
   Promise.all([
-    lookup().catch(function(){ /* offline or blocked: client-side checks still run */ }),
+    lookup(),
     webrtcTest()
   ]).then(function(){
     paintIdentity();

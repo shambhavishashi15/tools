@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connection privacy check — what your browser reveals</title>
+<meta name="description" content="Free, ad-free connection privacy check. See your IP, confirm your VPN is actually working, and find WebRTC, DNS and timezone leaks. Nothing is logged.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F3F0; --surface:#FFFFFF; --raised:#FAF9F7;
+  --ink:#16181C; --slate:#5C636D; --faint:#8A919B;
+  --rule:#E2E0DB; --rule-firm:#CBC8C1;
+  --danger:#B4322A; --danger-bg:#FBEDEB;
+  --warn:#9A6208; --warn-bg:#FAF2E2;
+  --pass:#2C6249; --pass-bg:#EAF2ED;
+  --mark:#2F4B8F; --mark-bg:#EDF1FA;
+  --shell:1080px;
+}
+[data-theme="dark"]{
+  --paper:#131519; --surface:#1B1E24; --raised:#22262D;
+  --ink:#E9E8E4; --slate:#A2A9B4; --faint:#727A86;
+  --rule:#2C313A; --rule-firm:#3D444F;
+  --danger:#F08C84; --danger-bg:#33201E;
+  --warn:#E5B45F; --warn-bg:#302719;
+  --pass:#79C6A2; --pass-bg:#182A22;
+  --mark:#93B0F0; --mark-bg:#1B2334;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.6; font-weight:400;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-ligatures:none}
+.shell{max-width:var(--shell);margin:0 auto;padding:0 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+a{color:var(--mark)}
+:focus-visible{outline:2px solid var(--mark);outline-offset:2px;border-radius:2px}
+
+/* ---------- masthead ---------- */
+.mast{border-bottom:1px solid var(--rule);background:var(--surface)}
+.mast .shell{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:500;font-size:15px;letter-spacing:-.01em}
+.brand span.dot{width:9px;height:9px;border-radius:50%;background:var(--pass);flex:none}
+.mast nav{display:flex;align-items:center;gap:18px}
+.mast nav a{font-size:14px;color:var(--slate);text-decoration:none}
+.mast nav a:hover{color:var(--ink)}
+.tbtn{border:1px solid var(--rule-firm);background:transparent;color:var(--slate);
+  border-radius:6px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.tbtn:hover{border-color:var(--ink);color:var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{padding:52px 0 40px;border-bottom:1px solid var(--rule)}
+.hero h1{font-size:15px;font-weight:500;color:var(--slate);margin:0 0 28px;letter-spacing:.01em}
+.readout{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap}
+.score{font-size:104px;line-height:.82;font-weight:300;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.score small{font-size:22px;font-weight:400;color:var(--faint);letter-spacing:-.01em;margin-left:4px}
+.verdict{flex:1;min-width:280px;padding-bottom:6px}
+.verdict p{margin:0 0 12px;font-size:17px;max-width:52ch;line-height:1.5}
+.meter{display:flex;gap:3px;margin-bottom:14px}
+.seg{height:26px;flex:1;background:var(--rule);border-radius:1px;transition:background .45s ease}
+.seg.on{background:currentColor}
+.tally{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:13px;padding:3px 10px;border-radius:4px;font-weight:500}
+.chip.d{background:var(--danger-bg);color:var(--danger)}
+.chip.w{background:var(--warn-bg);color:var(--warn)}
+.chip.p{background:var(--pass-bg);color:var(--pass)}
+.tone-d{color:var(--danger)} .tone-w{color:var(--warn)} .tone-p{color:var(--pass)}
+
+/* ---------- sections ---------- */
+section{padding:40px 0;border-bottom:1px solid var(--rule)}
+h2{font-size:20px;font-weight:500;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--slate);font-size:14px;margin:0 0 22px;max-width:60ch}
+
+/* identity grid */
+.ident{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.cell{background:var(--surface);padding:16px 18px;min-width:0}
+.cell .k{font-size:13px;color:var(--slate);margin:0 0 6px}
+.cell .v{font-size:18px;font-weight:500;margin:0;word-break:break-all;letter-spacing:-.01em}
+.cell .v.sm{font-size:14px;font-weight:400}
+.pending{color:var(--faint);font-weight:400!important;font-size:15px!important}
+
+/* findings */
+.finding{border:1px solid var(--rule);border-radius:8px;background:var(--surface);margin-bottom:8px;overflow:hidden}
+.fhead{display:flex;align-items:center;gap:14px;padding:15px 18px;width:100%;background:none;
+  border:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.fhead:hover{background:var(--raised)}
+.pip{width:9px;height:9px;border-radius:50%;flex:none;background:var(--faint)}
+.pip.d{background:var(--danger)} .pip.w{background:var(--warn)} .pip.p{background:var(--pass)}
+.fmain{flex:1;min-width:0}
+.fmain .t{font-size:15px;font-weight:500;margin:0}
+.fmain .s{font-size:13.5px;color:var(--slate);margin:2px 0 0;word-break:break-word}
+.fstat{font-size:13px;font-weight:500;white-space:nowrap}
+.caret{font-size:13px;color:var(--faint);transition:transform .18s ease;flex:none}
+.finding.open .caret{transform:rotate(90deg)}
+.fbody{display:none;padding:0 18px 16px 41px;font-size:14.5px;color:var(--slate);max-width:70ch}
+.finding.open .fbody{display:block}
+.fbody p{margin:0 0 9px}
+.fbody p:last-child{margin:0}
+
+/* fingerprint */
+.fp{border:1px solid var(--rule);border-radius:8px;background:var(--surface);overflow:hidden}
+.fprow{display:flex;gap:16px;padding:11px 18px;border-bottom:1px solid var(--rule);font-size:14px;align-items:baseline}
+.fprow:last-child{border-bottom:0}
+.fprow dt{color:var(--slate);width:190px;flex:none;margin:0}
+.fprow dd{margin:0;flex:1;min-width:0;word-break:break-word}
+.uniq{background:var(--raised)}
+.uniq dd{font-weight:500}
+
+/* diff panel */
+.panel{border:1px solid var(--rule-firm);border-radius:8px;background:var(--surface);padding:20px}
+.panel h3{margin:0 0 6px;font-size:16px;font-weight:500}
+.panel p.lead{margin:0 0 16px;color:var(--slate);font-size:14.5px;max-width:62ch}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:6px;
+  padding:9px 16px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.btn:hover{opacity:.86}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--rule-firm)}
+.btn.ghost:hover{border-color:var(--ink);opacity:1}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.hint{font-size:13px;color:var(--faint)}
+.difftable{margin-top:16px;border-top:1px solid var(--rule);display:none}
+.difftable.show{display:block}
+.dr{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:14px;align-items:baseline}
+.dr:last-child{border-bottom:0}
+.dr .lbl{width:150px;flex:none;color:var(--slate)}
+.dr .was{flex:1;min-width:0;word-break:break-all;color:var(--faint);text-decoration:line-through}
+.dr .now{flex:1;min-width:0;word-break:break-all;font-weight:500}
+.dr.same .now{font-weight:400;color:var(--slate)}
+.dr .tag{font-size:12px;font-weight:500;white-space:nowrap;padding:2px 8px;border-radius:4px}
+.tag.changed{background:var(--pass-bg);color:var(--pass)}
+.tag.stuck{background:var(--danger-bg);color:var(--danger)}
+
+/* api */
+pre{background:var(--raised);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;
+  overflow-x:auto;font-family:"IBM Plex Mono",monospace;font-size:13.5px;margin:0 0 12px;line-height:1.65}
+.note{border-left:3px solid var(--rule-firm);padding:2px 0 2px 14px;color:var(--slate);font-size:14px;max-width:64ch;margin:16px 0 0}
+
+/* explainers */
+.explain{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px}
+.explain h3{font-size:15px;font-weight:500;margin:0 0 6px}
+.explain p{margin:0;font-size:14.5px;color:var(--slate);line-height:1.65}
+
+footer{padding:32px 0 56px;color:var(--faint);font-size:13.5px}
+footer p{margin:0 0 6px;max-width:70ch}
+
+@media(max-width:620px){
+  .score{font-size:76px}
+  .fprow{flex-direction:column;gap:2px}
+  .fprow dt{width:auto}
+  .dr{flex-wrap:wrap}
+  .dr .lbl{width:100%}
+  .hero{padding:36px 0 30px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="shell">
+    <div class="brand"><span class="dot" id="brandDot"></span> Connection privacy check</div>
+    <nav>
+      <a href="#api">API</a>
+      <button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<div class="shell">
+
+<div class="hero">
+  <h1>Your exposure score</h1>
+  <div class="readout">
+    <div class="score tone-p" id="scoreNum">—<small>/100</small></div>
+    <div class="verdict">
+      <div class="meter" id="meter"></div>
+      <p id="verdictText">Running checks on your connection…</p>
+      <div class="tally" id="tally"></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <h2>Your connection</h2>
+  <p class="sub">What every website you visit can see the moment you arrive.</p>
+  <div class="ident">
+    <div class="cell"><p class="k">IPv4 address</p><p class="v pending" id="ip4">Checking…</p></div>
+    <div class="cell"><p class="k">IPv6 address</p><p class="v sm pending" id="ip6">Checking…</p></div>
+    <div class="cell"><p class="k">Network operator</p><p class="v sm pending" id="isp">Checking…</p></div>
+    <div class="cell"><p class="k">Apparent location</p><p class="v sm pending" id="loc">Checking…</p></div>
+    <div class="cell"><p class="k">Browser timezone</p><p class="v sm" id="tz">—</p></div>
+    <div class="cell"><p class="k">Local clock offset</p><p class="v sm" id="offset">—</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Leak tests</h2>
+  <p class="sub">A VPN hides your IP address. It does not automatically hide everything else. These checks look for the routes your real identity escapes through anyway.</p>
+  <div id="findings"></div>
+</section>
+
+<section>
+  <h2>Is your VPN actually working?</h2>
+  <div class="panel">
+    <h3>Before and after comparison</h3>
+    <p class="lead">Take a snapshot now, then switch your VPN on or off and compare. Anything that stays identical is something your VPN is not protecting.</p>
+    <div class="row">
+      <button class="btn" id="snapBtn">Take snapshot</button>
+      <button class="btn ghost" id="cmpBtn" disabled>Compare now</button>
+      <span class="hint" id="snapHint">No snapshot yet</span>
+    </div>
+    <div class="difftable" id="diffOut"></div>
+  </div>
+</section>
+
+<section>
+  <h2>What sites can see about you</h2>
+  <p class="sub">Even with a VPN, these details are readable by any page you open. Combined, they form a fingerprint that can follow you between sites without cookies.</p>
+  <dl class="fp" id="fpList"></dl>
+  <p class="note">The uniqueness figure is a rough estimate based on how much identifying information your browser exposes. It is not measured against a live population of visitors, so treat it as an order of magnitude rather than a precise count.</p>
+</section>
+
+<section id="api">
+  <h2>Developer API</h2>
+  <p class="sub">Free, CORS enabled, no key and no signup. Rate limited per IP.</p>
+  <pre>curl https://yoursite.com/api/ip</pre>
+  <pre>{
+  "ip": "82.14.6.201",
+  "version": "IPv4",
+  "city": "Frankfurt",
+  "region": "Hesse",
+  "country": "DE",
+  "asn": "AS3209",
+  "org": "Vodafone GmbH",
+  "timezone": "Europe/Berlin"
+}</pre>
+  <div class="row">
+    <button class="btn ghost" id="copyBtn">Copy this report as JSON</button>
+    <span class="hint" id="copyHint"></span>
+  </div>
+</section>
+
+<section>
+  <h2>How to read this</h2>
+  <div class="explain">
+    <div>
+      <h3>What an IP address is</h3>
+      <p>It is the return address your device gives out so websites know where to send the page back. Anyone you connect to can see it, and your internet provider knows which customer it belonged to at what time.</p>
+    </div>
+    <div>
+      <h3>Why the location looks wrong</h3>
+      <p>Location is guessed from who owns the address block, not from your device. It usually lands on your provider's regional hub, which can be a long way from you. A wrong city is normal and is not evidence of a leak.</p>
+    </div>
+    <div>
+      <h3>What a WebRTC leak is</h3>
+      <p>Browsers have a built-in video calling system that needs to discover your real network address to connect people directly. Any page can quietly ask it for that address, and it answers from outside your VPN tunnel.</p>
+    </div>
+    <div>
+      <h3>Why the timezone matters</h3>
+      <p>Your VPN moves your address to another country, but your operating system clock stays where you are. A site that compares the two sees the contradiction immediately, which flags you as using a VPN and hints at your real region.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>This page runs its checks in your browser. Your address is never written to a log or a database, and there are no third-party trackers or advertising scripts on this page.</p>
+  <p>Results are diagnostic, not a security guarantee. A clean report means these specific checks found nothing, not that you are anonymous.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var S = {
+    ip4:null, ip6:null, city:null, region:null, country:null,
+    asn:null, org:null, apiTz:null, privacyFlags:null,
+    tz:null, offset:null, rtcPublic:[], rtcLocal:[], rtcDone:false,
+    fp:{}, entropyBits:0
+  };
+  var snapshot = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  };
+
+  /* ---------- theme ---------- */
+  var root = document.documentElement, tBtn = $("themeBtn");
+  function setTheme(t){
+    root.setAttribute("data-theme", t);
+    tBtn.textContent = t === "dark" ? "Light" : "Dark";
+  }
+  if (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) setTheme("dark");
+  tBtn.addEventListener("click", function(){
+    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  /* ---------- meter ---------- */
+  var meter = $("meter");
+  for (var i=0;i<20;i++){ var d=document.createElement("div"); d.className="seg"; meter.appendChild(d); }
+  var segs = meter.children;
+
+  /* ---------- clock / timezone ---------- */
+  try { S.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch(e){ S.tz = null; }
+  S.offset = -new Date().getTimezoneOffset();
+  $("tz").textContent = S.tz || "Not exposed";
+  var oh = Math.trunc(S.offset/60), om = Math.abs(S.offset%60);
+  $("offset").textContent = "UTC" + (S.offset>=0?"+":"-") + String(Math.abs(oh)).padStart(2,"0") + ":" + String(om).padStart(2,"0");
+
+  /* ---------- fingerprint collection ---------- */
+  function canvasHash(){
+    try{
+      var c = document.createElement("canvas");
+      c.width = 240; c.height = 60;
+      var x = c.getContext("2d");
+      if(!x) return null;
+      x.textBaseline = "top";
+      x.font = "16px 'Arial'";
+      x.fillStyle = "#f60"; x.fillRect(0,0,120,24);
+      x.fillStyle = "#069"; x.fillText("Privacy check \u2601\uFE0F", 2, 4);
+      x.fillStyle = "rgba(102,0,102,0.7)"; x.fillText("Privacy check \u2601\uFE0F", 4, 20);
+      var data = c.toDataURL();
+      var h = 5381;
+      for (var i=0;i<data.length;i++){ h = ((h*33) ^ data.charCodeAt(i)) >>> 0; }
+      return h.toString(16).padStart(8,"0");
+    }catch(e){ return null; }
+  }
+
+  function glInfo(){
+    try{
+      var c = document.createElement("canvas");
+      var gl = c.getContext("webgl") || c.getContext("experimental-webgl");
+      if(!gl) return null;
+      var ext = gl.getExtension("WEBGL_debug_renderer_info");
+      if(!ext) return null;
+      var r = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+      return r ? String(r).slice(0,72) : null;
+    }catch(e){ return null; }
+  }
+
+  function fontCount(){
+    try{
+      var base = ["monospace","sans-serif","serif"];
+      var probe = ["Arial","Verdana","Georgia","Tahoma","Courier New","Times New Roman",
+        "Trebuchet MS","Impact","Comic Sans MS","Palatino","Garamond","Bookman",
+        "Segoe UI","Roboto","Helvetica Neue","Futura","Optima","Candara","Calibri",
+        "Cambria","Consolas","Franklin Gothic","Gill Sans","Lucida Console","Rockwell",
+        "Menlo","Monaco","Geneva","Copperplate","Baskerville","Didot","Hoefler Text",
+        "American Typewriter","Andale Mono","Marker Felt","Papyrus","Zapfino","Noto Sans"];
+      var span = document.createElement("span");
+      span.style.cssText = "position:absolute;left:-9999px;top:-9999px;font-size:72px;white-space:nowrap";
+      span.textContent = "mmmmmmmmmmlli";
+      document.body.appendChild(span);
+      var ref = {};
+      base.forEach(function(b){ span.style.fontFamily = b; ref[b] = [span.offsetWidth, span.offsetHeight]; });
+      var n = 0;
+      probe.forEach(function(f){
+        for (var i=0;i<base.length;i++){
+          span.style.fontFamily = "'" + f + "'," + base[i];
+          if (span.offsetWidth !== ref[base[i]][0] || span.offsetHeight !== ref[base[i]][1]){ n++; return; }
+        }
+      });
+      document.body.removeChild(span);
+      return n;
+    }catch(e){ return null; }
+  }
+
+  var nav = navigator;
+  S.fp = {
+    ua: nav.userAgent || null,
+    platform: nav.platform || null,
+    languages: (nav.languages && nav.languages.length ? nav.languages.join(", ") : nav.language) || null,
+    screen: screen.width + " \u00d7 " + screen.height + " at " + (window.devicePixelRatio||1) + "x",
+    viewport: window.innerWidth + " \u00d7 " + window.innerHeight,
+    depth: screen.colorDepth + "-bit",
+    cores: nav.hardwareConcurrency || null,
+    memory: nav.deviceMemory ? nav.deviceMemory + " GB" : null,
+    touch: nav.maxTouchPoints || 0,
+    dnt: (nav.doNotTrack === "1" || window.doNotTrack === "1") ? "Enabled" : "Not set",
+    cookies: nav.cookieEnabled ? "Enabled" : "Blocked",
+    canvas: canvasHash(),
+    webgl: glInfo(),
+    fonts: fontCount()
+  };
+
+  /* rough entropy estimate, in bits, from what is exposed */
+  (function(){
+    var b = 0;
+    if (S.fp.ua) b += 10;
+    if (S.fp.screen) b += 4.5;
+    if (S.fp.languages) b += 3;
+    if (S.tz) b += 3.5;
+    if (S.fp.canvas) b += 8;
+    if (S.fp.webgl) b += 6;
+    if (S.fp.fonts) b += Math.min(6, S.fp.fonts / 7);
+    if (S.fp.cores) b += 2;
+    if (S.fp.memory) b += 1.5;
+    if (S.fp.touch) b += 1;
+    S.entropyBits = b;
+  })();
+
+  /* ---------- WebRTC leak test ---------- */
+  var RE4 = /((?:[0-9]{1,3}\.){3}[0-9]{1,3})/;
+  var RE6 = /([a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})/i;
+  function isPrivate(ip){
+    return /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.)/.test(ip);
+  }
+  function webrtcTest(){
+    return new Promise(function(resolve){
+      var PC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+      if (!PC){ S.rtcDone = true; return resolve(); }
+      var pc;
+      try{
+        pc = new PC({ iceServers:[{urls:"stun:stun.l.google.com:19302"}] });
+      }catch(e){ S.rtcDone = true; return resolve(); }
+      var done = false;
+      var finish = function(){
+        if (done) return; done = true;
+        try{ pc.close(); }catch(e){}
+        S.rtcDone = true; resolve();
+      };
+      pc.onicecandidate = function(ev){
+        if (!ev || !ev.candidate || !ev.candidate.candidate) return finish();
+        var cand = ev.candidate.candidate;
+        if (/\.local\b/i.test(cand)) return;           /* mDNS obfuscated, not a leak */
+        var m4 = cand.match(RE4), m6 = cand.match(RE6);
+        var found = m4 ? m4[1] : (m6 ? m6[1] : null);
+        if (!found) return;
+        if (m4 && isPrivate(found)){
+          if (S.rtcLocal.indexOf(found) < 0) S.rtcLocal.push(found);
+        } else {
+          if (S.rtcPublic.indexOf(found) < 0) S.rtcPublic.push(found);
+        }
+      };
+      try{
+        pc.createDataChannel("probe");
+        pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).catch(finish);
+      }catch(e){ return finish(); }
+      setTimeout(finish, 2600);
+    });
+  }
+
+  /* ---------- IP + geolocation lookup ----------
+     Swap this endpoint for your own /api/ip serverless function once deployed,
+     so your provider key stays server-side and you control caching. */
+  function lookup(){
+    return fetch("https://ipapi.co/json/", { cache:"no-store" })
+      .then(function(r){ if(!r.ok) throw new Error("http " + r.status); return r.json(); })
+      .then(function(d){
+        if (d.error) throw new Error(d.reason || "lookup failed");
+        var ip = d.ip || null;
+        if (ip && ip.indexOf(":") > -1) S.ip6 = ip; else S.ip4 = ip;
+        S.city = d.city || null;
+        S.region = d.region || null;
+        S.country = d.country_name || d.country || null;
+        S.asn = d.asn || null;
+        S.org = d.org || null;
+        S.apiTz = d.timezone || null;
+      });
+  }
+
+  /* ---------- scoring ---------- */
+  function assess(){
+    var out = [], apiUp = !!(S.ip4 || S.ip6);
+
+    /* WebRTC */
+    if (!S.rtcDone){
+      out.push({id:"webrtc",level:"skip",title:"WebRTC leak",stat:"Not run",
+        sub:"The test did not complete.",body:"Reload the page to try again."});
+    } else if (S.rtcPublic.length){
+      out.push({id:"webrtc",level:"bad",title:"WebRTC leak",stat:"Leaking",weight:30,
+        sub:"Public address " + S.rtcPublic.join(", ") + " is reachable by any page",
+        body:"Your browser handed out a routable address outside the VPN tunnel. A site can read this with a few lines of script and no permission prompt. Fix it by disabling WebRTC in your browser settings, installing an extension that blocks it, or using a VPN client that patches the browser rather than only the system route."});
+    } else if (S.rtcLocal.length){
+      out.push({id:"webrtc",level:"warn",title:"WebRTC leak",stat:"Partial",weight:8,
+        sub:"Local network address " + S.rtcLocal.join(", ") + " exposed",
+        body:"Only a private address escaped, so your public identity is safe. This still tells a site how your home network is laid out and can help distinguish you from other visitors."});
+    } else {
+      out.push({id:"webrtc",level:"ok",title:"WebRTC leak",stat:"Clean",
+        sub:"No routable address escaped the tunnel",
+        body:"Either WebRTC is disabled, your browser replaced the address with an mDNS placeholder, or the tunnel is holding. This is the behaviour you want."});
+    }
+
+    /* Timezone versus IP country */
+    if (apiUp && S.apiTz && S.tz){
+      if (S.apiTz !== S.tz){
+        out.push({id:"tz",level:"warn",title:"Timezone mismatch",stat:"Mismatch",weight:14,
+          sub:"Browser reports " + S.tz + ", your address maps to " + S.apiTz,
+          body:"Your VPN moved your address but not your clock. Any site can compare the two in one line of script and conclude you are using a VPN, plus narrow down where you actually are. Some browsers and privacy extensions can spoof the reported timezone to match your exit country."});
+      } else {
+        out.push({id:"tz",level:"ok",title:"Timezone mismatch",stat:"Consistent",
+          sub:"Clock and address agree on " + S.tz,
+          body:"Nothing here contradicts your apparent location."});
+      }
+    } else {
+      out.push({id:"tz",level:"skip",title:"Timezone mismatch",stat:"Needs lookup",
+        sub:"Cannot compare without a completed address lookup",
+        body:"This check compares your system clock against the country your address belongs to."});
+    }
+
+    /* Proxy / VPN detection */
+    if (apiUp){
+      out.push({id:"vpn",level:"info",title:"Proxy and VPN detection",stat:"See detail",
+        sub:(S.org ? S.org : "Network operator unknown") + (S.country ? " \u00b7 " + S.country : ""),
+        body:"Commercial detection services grade your address block by whether it belongs to a hosting company rather than a consumer provider. If the operator above is a datacentre or a known VPN brand, sites can tell you are on a VPN even though they cannot see through it. Wire your paid provider's flags in here to turn this into a pass or fail."});
+    } else {
+      out.push({id:"vpn",level:"skip",title:"Proxy and VPN detection",stat:"Needs lookup",
+        sub:"Address lookup did not complete",
+        body:"This check needs the address lookup to return first."});
+    }
+
+    /* DNS — honest placeholder */
+    out.push({id:"dns",level:"skip",title:"DNS leak",stat:"Not yet built",
+      sub:"Requires resolver-side infrastructure",
+      body:"A real DNS leak test resolves several unique one-off hostnames against nameservers you control, then reports which resolvers asked for them. That needs a domain with custom nameservers and a small logging service, so it cannot run purely in the browser. Marked as pending rather than faked."});
+
+    /* Fingerprint surface */
+    var bits = S.entropyBits;
+    if (bits >= 34){
+      out.push({id:"fp",level:"bad",title:"Fingerprint surface",stat:"Highly distinctive",weight:18,
+        sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
+        body:"Your browser gives away enough combined detail to be recognised across sites without any cookie. Canvas and WebGL readings are the largest contributors. A hardened browser or a resist-fingerprinting setting reduces this substantially."});
+    } else if (bits >= 22){
+      out.push({id:"fp",level:"warn",title:"Fingerprint surface",stat:"Moderate",weight:9,
+        sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
+        body:"You are not trivially unique, but a determined tracker combining these signals could still single you out within a large group."});
+    } else {
+      out.push({id:"fp",level:"ok",title:"Fingerprint surface",stat:"Restrained",
+        sub:"Roughly " + bits.toFixed(0) + " bits of identifying detail exposed",
+        body:"Your browser is withholding the readings that usually make fingerprints stick."});
+    }
+
+    /* Canvas */
+    if (S.fp.canvas){
+      out.push({id:"canvas",level:"warn",title:"Canvas fingerprinting",stat:"Readable",weight:7,
+        sub:"Stable signature " + S.fp.canvas + " returned",
+        body:"Asked to draw the same hidden image, your graphics stack produces a result specific to your device and drivers. It stays the same across visits and across sites, which makes it a durable identifier."});
+    } else {
+      out.push({id:"canvas",level:"ok",title:"Canvas fingerprinting",stat:"Blocked",
+        sub:"No stable signature returned",
+        body:"Your browser is blocking or randomising canvas reads."});
+    }
+
+    /* WebGL */
+    if (S.fp.webgl){
+      out.push({id:"webgl",level:"warn",title:"Graphics hardware",stat:"Exposed",weight:6,
+        sub:S.fp.webgl,
+        body:"Your exact graphics adapter is readable. Combined with screen size and font list it narrows you down sharply, and unlike an IP address a VPN does nothing about it."});
+    } else {
+      out.push({id:"webgl",level:"ok",title:"Graphics hardware",stat:"Masked",
+        sub:"Adapter details withheld",
+        body:"Your browser is not handing out the adapter string."});
+    }
+
+    /* IPv6 alongside IPv4 */
+    if (S.ip4 && S.ip6){
+      out.push({id:"dual",level:"warn",title:"IPv6 exposure",stat:"Dual stack",weight:6,
+        sub:"Both address families are reachable",
+        body:"Plenty of VPN clients tunnel IPv4 correctly and let IPv6 traffic go out over the ordinary connection. If both are visible, check whether your provider actually tunnels or blocks IPv6."});
+    }
+
+    return out;
+  }
+
+  /* ---------- render ---------- */
+  function paintIdentity(){
+    function set(id, val, fallback){
+      var el = $(id);
+      el.textContent = val || fallback;
+      el.classList.toggle("pending", !val);
+    }
+    set("ip4", S.ip4, "Not detected");
+    set("ip6", S.ip6, "Not detected");
+    set("isp", S.org ? (S.org + (S.asn ? " \u00b7 " + S.asn : "")) : null, "Unavailable");
+    var place = [S.city, S.region, S.country].filter(Boolean).join(", ");
+    set("loc", place || null, "Unavailable");
+  }
+
+  function paintFindings(list){
+    var host = $("findings");
+    host.innerHTML = "";
+    var map = { bad:"d", warn:"w", ok:"p", skip:"", info:"" };
+    list.forEach(function(f){
+      var cls = map[f.level] || "";
+      var el = document.createElement("div");
+      el.className = "finding";
+      el.innerHTML =
+        '<button class="fhead" aria-expanded="false">' +
+          '<span class="pip ' + cls + '"></span>' +
+          '<span class="fmain"><p class="t">' + esc(f.title) + '</p>' +
+          '<p class="s">' + esc(f.sub) + '</p></span>' +
+          '<span class="fstat ' + (cls ? "tone-" + cls : "") + '">' + esc(f.stat) + '</span>' +
+          '<span class="caret">\u203a</span>' +
+        '</button>' +
+        '<div class="fbody"><p>' + esc(f.body) + '</p></div>';
+      var btn = el.querySelector(".fhead");
+      btn.addEventListener("click", function(){
+        var open = el.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      host.appendChild(el);
+    });
+  }
+
+  function paintScore(list){
+    var score = 100, bad = 0, warn = 0, ok = 0;
+    list.forEach(function(f){
+      if (f.weight) score -= f.weight;
+      if (f.level === "bad") bad++;
+      else if (f.level === "warn") warn++;
+      else if (f.level === "ok") ok++;
+    });
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    var tone = score >= 75 ? "p" : (score >= 45 ? "w" : "d");
+    var num = $("scoreNum");
+    num.className = "score tone-" + tone;
+    num.innerHTML = score + '<small>/100</small>';
+
+    var lit = Math.round(score / 5);
+    for (var i=0;i<segs.length;i++) segs[i].className = "seg" + (i < lit ? " on" : "");
+    meter.className = "meter tone-" + tone;
+
+    var issues = bad + warn;
+    $("verdictText").textContent = issues === 0
+      ? "Nothing leaked in these checks. Your address and your browser are telling the same story."
+      : issues + (issues === 1 ? " issue found. " : " issues found. ") +
+        (bad ? "Your real address is escaping the tunnel. " : "") +
+        "Open any row below for what it means and how to fix it.";
+
+    var t = $("tally");
+    t.innerHTML = "";
+    [[bad,"d","leak"],[warn,"w","warning"],[ok,"p","passed"]].forEach(function(p){
+      if (!p[0]) return;
+      var s = document.createElement("span");
+      s.className = "chip " + p[1];
+      s.textContent = p[0] + " " + p[2] + (p[0] > 1 && p[2] !== "passed" ? "s" : "");
+      t.appendChild(s);
+    });
+    $("brandDot").style.background = "var(--" + (tone === "p" ? "pass" : tone === "w" ? "warn" : "danger") + ")";
+  }
+
+  function paintFingerprint(){
+    var rows = [
+      ["Browser and system", S.fp.ua],
+      ["Platform", S.fp.platform],
+      ["Languages", S.fp.languages],
+      ["Screen", S.fp.screen],
+      ["Window size", S.fp.viewport],
+      ["Colour depth", S.fp.depth],
+      ["CPU cores", S.fp.cores],
+      ["Device memory", S.fp.memory],
+      ["Touch points", S.fp.touch],
+      ["Canvas signature", S.fp.canvas],
+      ["Graphics adapter", S.fp.webgl],
+      ["Fonts detected", S.fp.fonts != null ? S.fp.fonts + " of 38 probed" : null],
+      ["Do Not Track", S.fp.dnt],
+      ["Cookies", S.fp.cookies]
+    ];
+    var host = $("fpList");
+    host.innerHTML = "";
+    rows.forEach(function(r){
+      var d = document.createElement("div");
+      d.className = "fprow";
+      d.innerHTML = '<dt>' + esc(r[0]) + '</dt><dd' +
+        (r[0].indexOf("Canvas") === 0 ? ' class="mono"' : '') + '>' +
+        (r[1] == null || r[1] === "" ? '<span style="color:var(--faint)">Withheld</span>' : esc(r[1])) + '</dd>';
+      host.appendChild(d);
+    });
+    var one = Math.round(Math.pow(2, S.entropyBits));
+    var u = document.createElement("div");
+    u.className = "fprow uniq";
+    u.innerHTML = '<dt>Estimated uniqueness</dt><dd>about 1 in ' + one.toLocaleString() + ' browsers</dd>';
+    host.appendChild(u);
+  }
+
+  /* ---------- snapshot and diff ----------
+     In-memory only here. When you deploy, persist this to localStorage so the
+     snapshot survives the VPN reconnect and the page reload that follows it. */
+  function currentState(){
+    return {
+      "IPv4": S.ip4 || "none",
+      "IPv6": S.ip6 || "none",
+      "Operator": S.org || "unknown",
+      "Country": S.country || "unknown",
+      "WebRTC public": S.rtcPublic.length ? S.rtcPublic.join(", ") : "none",
+      "Timezone": S.tz || "unknown",
+      "Canvas": S.fp.canvas || "blocked",
+      "Graphics": S.fp.webgl || "masked"
+    };
+  }
+  var VOLATILE = ["IPv4","IPv6","Operator","Country","WebRTC public"];
+
+  $("snapBtn").addEventListener("click", function(){
+    snapshot = currentState();
+    $("cmpBtn").disabled = false;
+    $("snapHint").textContent = "Snapshot saved. Switch your VPN, then compare.";
+    $("diffOut").className = "difftable";
+  });
+
+  $("cmpBtn").addEventListener("click", function(){
+    if (!snapshot) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "Re-checking…";
+    S.rtcPublic = []; S.rtcLocal = []; S.rtcDone = false;
+    Promise.all([
+      lookup().catch(function(){}),
+      webrtcTest()
+    ]).then(function(){
+      paintIdentity();
+      var list = assess();
+      paintFindings(list);
+      paintScore(list);
+      var now = currentState(), host = $("diffOut");
+      host.innerHTML = "";
+      Object.keys(now).forEach(function(k){
+        var was = snapshot[k], is = now[k], changed = was !== is;
+        var expected = VOLATILE.indexOf(k) > -1;
+        var row = document.createElement("div");
+        row.className = "dr" + (changed ? "" : " same");
+        var tag = "";
+        if (changed) tag = '<span class="tag changed">changed</span>';
+        else if (expected && was !== "none") tag = '<span class="tag stuck">unchanged</span>';
+        row.innerHTML = '<span class="lbl">' + esc(k) + '</span>' +
+          (changed ? '<span class="was">' + esc(was) + '</span>' : '') +
+          '<span class="now">' + esc(is) + '</span>' + tag;
+        host.appendChild(row);
+      });
+      host.className = "difftable show";
+      btn.textContent = "Compare now";
+      btn.disabled = false;
+      $("snapHint").textContent = "Anything marked unchanged is not being protected.";
+    });
+  });
+
+  /* ---------- copy JSON ---------- */
+  $("copyBtn").addEventListener("click", function(){
+    var payload = {
+      ip: S.ip4 || S.ip6 || null,
+      city: S.city, region: S.region, country: S.country,
+      asn: S.asn, org: S.org,
+      timezone: S.tz,
+      webrtc: { publicAddresses: S.rtcPublic, localAddresses: S.rtcLocal },
+      fingerprint: S.fp,
+      estimatedEntropyBits: Number(S.entropyBits.toFixed(1))
+    };
+    var text = JSON.stringify(payload, null, 2);
+    var hint = $("copyHint");
+    function ok(){ hint.textContent = "Copied"; setTimeout(function(){ hint.textContent = ""; }, 2200); }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ hint.textContent = "Copy blocked by browser"; });
+    } else {
+      hint.textContent = "Clipboard unavailable";
+    }
+  });
+
+  /* ---------- run ---------- */
+  paintFingerprint();
+  Promise.all([
+    lookup().catch(function(){ /* offline or blocked: client-side checks still run */ }),
+    webrtcTest()
+  ]).then(function(){
+    paintIdentity();
+    var list = assess();
+    paintFindings(list);
+    paintScore(list);
+  });
+
+})();
+</script>
+</body>
+</html>

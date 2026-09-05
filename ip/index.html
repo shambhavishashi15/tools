@@ -136,6 +136,7 @@ h2{font-size:20px;font-weight:500;margin:0 0 4px;letter-spacing:-.01em}
 .dr .tag{font-size:12px;font-weight:500;white-space:nowrap;padding:2px 8px;border-radius:4px}
 .tag.changed{background:var(--pass-bg);color:var(--pass)}
 .tag.stuck{background:var(--danger-bg);color:var(--danger)}
+.tag.rotate{background:var(--warn-bg);color:var(--warn)}
 
 /* api */
 pre{background:var(--raised);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;
@@ -419,21 +420,33 @@ footer p{margin:0 0 6px;max-width:70ch}
   function webrtcTest(){
     return new Promise(function(resolve){
       var PC = window.RTCPeerConnection || window.webkitRTCPeerConnection;
-      if (!PC){ S.rtcDone = true; return resolve(); }
+      var done = false;
+      function finish(pc){
+        if (done) return; done = true;
+        try{ if (pc) pc.close(); }catch(e){}
+        /* Sort before returning. Candidates arrive in discovery order, which
+           varies run to run, and unsorted output makes the before/after diff
+           report a change when the same addresses simply arrived in a
+           different sequence. */
+        S.rtcPublic.sort();
+        S.rtcLocal.sort();
+        S.rtcDone = true;
+        resolve();
+      }
+      if (!PC) return finish(null);
+
       var pc;
       try{
-        pc = new PC({ iceServers:[{urls:"stun:stun.l.google.com:19302"}] });
-      }catch(e){ S.rtcDone = true; return resolve(); }
-      var done = false;
-      var finish = function(){
-        if (done) return; done = true;
-        try{ pc.close(); }catch(e){}
-        S.rtcDone = true; resolve();
-      };
+        pc = new PC({ iceServers:[
+          {urls:"stun:stun.l.google.com:19302"},
+          {urls:"stun:stun1.l.google.com:19302"}
+        ]});
+      }catch(e){ return finish(null); }
+
       pc.onicecandidate = function(ev){
-        if (!ev || !ev.candidate || !ev.candidate.candidate) return finish();
+        if (!ev || !ev.candidate || !ev.candidate.candidate) return;  /* sentinel: wait for state change */
         var cand = ev.candidate.candidate;
-        if (/\.local\b/i.test(cand)) return;           /* mDNS obfuscated, not a leak */
+        if (/\.local\b/i.test(cand)) return;           /* mDNS placeholder, not a leak */
         var m4 = cand.match(RE4), m6 = cand.match(RE6);
         var found = m4 ? m4[1] : (m6 ? m6[1] : null);
         if (!found) return;
@@ -443,11 +456,21 @@ footer p{margin:0 0 6px;max-width:70ch}
           if (S.rtcPublic.indexOf(found) < 0) S.rtcPublic.push(found);
         }
       };
+      /* Wait for gathering to actually complete rather than guessing a
+         duration. A short cut-off used to capture one address on a fast run
+         and two on a slow one, which the diff then reported as a change. */
+      pc.onicegatheringstatechange = function(){
+        if (pc.iceGatheringState === "complete") finish(pc);
+      };
+
       try{
         pc.createDataChannel("probe");
-        pc.createOffer().then(function(o){ return pc.setLocalDescription(o); }).catch(finish);
-      }catch(e){ return finish(); }
-      setTimeout(finish, 2600);
+        pc.createOffer()
+          .then(function(o){ return pc.setLocalDescription(o); })
+          .catch(function(){ finish(pc); });
+      }catch(e){ return finish(pc); }
+
+      setTimeout(function(){ finish(pc); }, 6000);   /* backstop only */
     });
   }
 
@@ -790,18 +813,24 @@ footer p{margin:0 0 6px;max-width:70ch}
      In-memory only here. When you deploy, persist this to localStorage so the
      snapshot survives the VPN reconnect and the page reload that follows it. */
   function currentState(){
+    var v4 = S.rtcPublic.filter(function(a){ return a.indexOf(":") < 0; }).sort();
+    var v6 = S.rtcPublic.filter(function(a){ return a.indexOf(":") > -1; }).sort();
     return {
-      "IPv4": S.ip4 || "none",
-      "IPv6": S.ip6 || "none",
+      "Address seen by site": S.ip4 || S.ip6 || "none",
       "Operator": S.org || "unknown",
       "Country": S.country || "unknown",
-      "WebRTC public": S.rtcPublic.length ? S.rtcPublic.join(", ") : "none",
+      "WebRTC IPv4": v4.length ? v4.join(", ") : "none",
+      "WebRTC IPv6": v6.length ? v6.join(", ") : "none",
       "Timezone": S.tz || "unknown",
       "Canvas": S.fp.canvas || "blocked",
       "Graphics": S.fp.webgl || "masked"
     };
   }
-  var VOLATILE = ["IPv4","IPv6","Operator","Country","WebRTC public"];
+  var VOLATILE = ["Address seen by site","Operator","Country","WebRTC IPv4","WebRTC IPv6"];
+  /* Temporary IPv6 addresses rotate on their own under privacy extensions, and
+     mobile carriers reassign freely, so a change here is not by itself proof
+     that anything you did took effect. */
+  var SELF_ROTATING = ["WebRTC IPv6"];
 
   $("snapBtn").addEventListener("click", function(){
     snapshot = currentState();
@@ -832,8 +861,13 @@ footer p{margin:0 0 6px;max-width:70ch}
         var row = document.createElement("div");
         row.className = "dr" + (changed ? "" : " same");
         var tag = "";
-        if (changed) tag = '<span class="tag changed">changed</span>';
-        else if (expected && was !== "none") tag = '<span class="tag stuck">unchanged</span>';
+        if (changed){
+          tag = SELF_ROTATING.indexOf(k) > -1
+            ? '<span class="tag rotate">changed (rotates on its own)</span>'
+            : '<span class="tag changed">changed</span>';
+        } else if (expected && was !== "none"){
+          tag = '<span class="tag stuck">unchanged</span>';
+        }
         row.innerHTML = '<span class="lbl">' + esc(k) + '</span>' +
           (changed ? '<span class="was">' + esc(was) + '</span>' : '') +
           '<span class="now">' + esc(is) + '</span>' + tag;
@@ -842,7 +876,7 @@ footer p{margin:0 0 6px;max-width:70ch}
       host.className = "difftable show";
       btn.textContent = "Compare now";
       btn.disabled = false;
-      $("snapHint").textContent = "Anything marked unchanged is not being protected.";
+      $("snapHint").textContent = "Rows marked unchanged did not move. If you did not switch anything, unchanged is the expected result.";
     });
   });
 

@@ -249,7 +249,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this server only, measured once each time. A busy moment or a wobble on your line moves them, so a difference under about ten per cent is noise rather than a finding. Run it twice if a number looks surprising.</p>
+    <p>Speed figures cover the route between you and this one server. Download uses three parallel connections, the way dedicated speed tests do; latency is measured to the nearest edge of this site's network. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -387,11 +387,16 @@ h1 em{font-style:normal;color:var(--amber)}
       .catch(function(){ return null; });
   }
 
+  /* Latency is measured against this page's own static path, which the host
+     serves from an edge node near the visitor. Pinging the serverless
+     function instead would add its invocation overhead plus the distance to
+     its home region, inflating every reading; an earlier build did exactly
+     that and reported half a second of "latency" that was mostly geography. */
   function latency(){
     var runs=[];
     function once(){
       var t=performance.now();
-      return fetch("/api/speed?cb="+Math.random(),{method:"HEAD",cache:"no-store"})
+      return fetch(location.pathname + "?cb="+Math.random(),{method:"HEAD",cache:"no-store"})
         .then(function(){ runs.push(performance.now()-t); })
         .catch(function(){});
     }
@@ -434,37 +439,51 @@ h1 em{font-style:normal;color:var(--amber)}
     return (totalBytes * 8) / (transfer / 1000) / 1e6;
   }
 
-  /* Capped at 8 seconds: a fixed payload took 17+ seconds on a slow VPN while
-     the page promised fifteen. Aborting early and computing from the samples
-     already collected gives the same answer in bounded time. */
+  /* Three parallel streams, summed. A single TCP connection is capped by
+     window size divided by round-trip time, so over a long route it reports a
+     fraction of what the line carries: measured against a well-known parallel
+     tester, the single-stream build showed 0.5 Mbps on a link doing 3.2.
+     Parallel connections are how every serious speed test defeats this.
+     Still capped at 8 seconds; whatever arrived by then is judged. */
   function download(lat){
-    var bytes = 4 * 1024 * 1024;
+    var STREAMS = 3, bytesEach = 1536 * 1024;
     var ctrl = ("AbortController" in window) ? new AbortController() : null;
     var t0 = performance.now(), samples = [], got = 0;
     var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 8000);
-    return fetch("/api/speed?bytes="+bytes+"&cb="+Math.random(),
-        ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
-      .then(function(r){
-        if (!r.body || !r.body.getReader){
-          return r.arrayBuffer().then(function(buf){ got = buf.byteLength; });
-        }
-        var reader = r.body.getReader();
-        function pump(){
-          return reader.read().then(function(res){
-            if (res.done) return;
-            got += res.value.length;
-            samples.push({ t: performance.now() - t0, b: got });
-            return pump();
-          });
-        }
-        return pump();
-      })
-      .catch(function(){ /* aborted at the cap or dropped: judge what arrived */ })
-      .then(function(){
-        clearTimeout(timer);
-        if (!got) return null;
-        return steadyRate(samples, performance.now() - t0, got, lat);
-      });
+
+    function one(){
+      return fetch("/api/speed?bytes="+bytesEach+"&cb="+Math.random(),
+          ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
+        .then(function(r){
+          if (!r.body || !r.body.getReader){
+            return r.arrayBuffer().then(function(buf){
+              got += buf.byteLength;
+              samples.push({ t: performance.now() - t0, b: got });
+            });
+          }
+          var reader = r.body.getReader();
+          function pump(){
+            return reader.read().then(function(res){
+              if (res.done) return;
+              got += res.value.length;
+              samples.push({ t: performance.now() - t0, b: got });
+              return pump();
+            });
+          }
+          return pump();
+        })
+        .catch(function(){ /* aborted at the cap or dropped: keep what arrived */ });
+    }
+
+    var runs = [];
+    for (var i = 0; i < STREAMS; i++) runs.push(one());
+    return Promise.all(runs).then(function(){
+      clearTimeout(timer);
+      if (!got) return null;
+      /* The shared byte counter merges the streams, so the samples already
+         describe combined throughput over time. */
+      return steadyRate(samples, performance.now() - t0, got, lat);
+    });
   }
 
   /* XMLHttpRequest rather than fetch, because only XHR reports upload

@@ -282,6 +282,12 @@ h1 em{font-style:normal;color:var(--amber)}
     }
   })();
   var KEY = "vpncheck.baseline.v1";
+  /* Bumped whenever the measurement technique changes. A baseline taken with
+     an older method is not comparable to a run taken with a newer one, and
+     silently comparing across methods would produce deltas that are artifacts
+     of the code change rather than of the VPN. */
+  var METHOD = 2;
+  var staleBaselineWiped = false;
 
   var root=document.documentElement, tb=$("themeBtn");
   function theme(t){ root.setAttribute("data-theme",t); tb.textContent = t==="dark"?"Light":"Dark"; }
@@ -536,6 +542,7 @@ h1 em{font-style:normal;color:var(--amber)}
           return upload(lat).then(function(ul){
             var id = r[0] || {}, rtc = r[1];
             return {
+              v: METHOD,
               at: Date.now(),
               ip: id.ip || null,
               city: id.city || null,
@@ -840,8 +847,15 @@ h1 em{font-style:normal;color:var(--amber)}
   }
 
   function loadBase(){
-    try{ var raw=store.get(KEY); return raw ? JSON.parse(raw) : null; }
-    catch(e){ return null; }
+    try{
+      var raw = store.get(KEY);
+      if (!raw) return null;
+      var b = JSON.parse(raw);
+      if (b && b.v === METHOD) return b;
+      store.del(KEY);
+      staleBaselineWiped = true;
+      return null;
+    }catch(e){ return null; }
   }
 
   function run(){
@@ -867,6 +881,9 @@ h1 em{font-style:normal;color:var(--amber)}
     }).catch(function(){
       $("stageHint").textContent="Something went wrong. Try again.";
       setStage(loadBase() ? "ready" : "empty");
+  if (staleBaselineWiped){
+    $("stageHint").textContent = "The measurement method was updated, so a fresh baseline is needed.";
+  }
     }).then(function(){
       busy=false; b.disabled=false; r.disabled=false;
       $("stageBox").classList.remove("measuring");
@@ -887,6 +904,9 @@ h1 em{font-style:normal;color:var(--amber)}
   });
 
   setStage(loadBase() ? "ready" : "empty");
+  if (staleBaselineWiped){
+    $("stageHint").textContent = "The measurement method was updated, so a fresh baseline is needed.";
+  }
 })();
 
 </script>

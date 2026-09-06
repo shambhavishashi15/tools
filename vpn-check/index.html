@@ -348,7 +348,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this one server. Download opens parallel connections, keeps them filled for up to ten seconds and sums them, the way dedicated speed tests measure, so its number is comparable to theirs. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>Speed figures cover the route between you and this one server. Download opens parallel connections to a file served from the network edge nearest you, keeps them filled for up to ten seconds and sums them, the way dedicated speed tests measure, so its number is comparable to theirs. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -385,7 +385,7 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 5;
+  var METHOD = 6;
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
@@ -619,16 +619,27 @@ h1 em{font-style:normal;color:var(--amber)}
     return (totalBytes * 8) / (transfer / 1000) / 1e6;
   }
 
-  /* A browser grants ONE TCP connection per origin over HTTP/2, so real
-     parallelism, the kind every dedicated speed test uses, needs real extra
-     origins. Each entry below must serve the same /api/speed; entries that do
-     not answer are dropped after two failures and cost nothing. Today the
-     list is the production host plus Vercel's branch alias. On domain day,
-     replace it with speed1..speed4 subdomains pointed at this same project
-     for full parity with aggregate testers. */
+  /* Two things decide download throughput here, and the second one dominated
+     for a long time.
+
+     First, connections: a browser grants ONE TCP connection per origin over
+     HTTP/2, so real parallelism needs real extra origins. Each entry below
+     must serve the same files; entries that do not answer are dropped after
+     two failures and cost nothing.
+
+     Second, and far more important, distance. Serverless functions run in one
+     region, so a visitor in Asia behind a European VPN was fetching across the
+     Atlantic and back: measured against a tester whose server sat beside the
+     VPN exit, this read 3.5 Mbps where the line was carrying 25. Static files
+     are served from CDN edge nodes worldwide, so the payload below arrives
+     from a node near the visitor. The function endpoint stays as a fallback
+     for the case where the file is missing. */
   var SPEED_ORIGINS = [
     "https://tools-git-main-personaltools1.vercel.app"
   ];
+  var PAYLOAD_PATH = "/speed-payload.bin";
+  var payloadOk = true;
+
   function speedOrigins(){
     var out = [location.origin];
     SPEED_ORIGINS.forEach(function(o){
@@ -638,13 +649,18 @@ h1 em{font-style:normal;color:var(--amber)}
     return out;
   }
 
-  /* Download: every origin's connection kept continuously filled for a
-     ten-second window, all bytes summed into one sample stream, rate taken
-     from the steady portion after TCP's warm-up. This matches how dedicated
-     testers measure, so the headline is comparable to theirs, including
-     through VPN relays that limit each connection separately. */
+  /* No cache-busting query string: it would make every request a cache miss
+     at the edge and send the fetch back to the origin region, undoing the
+     whole point. "no-store" already forces a real network transfer while
+     still letting the CDN answer from its nearest node. */
+  function downloadUrl(origin){
+    return payloadOk
+      ? origin + PAYLOAD_PATH
+      : origin + "/api/speed?bytes=" + (3 * 1024 * 1024) + "&cb=" + Math.random();
+  }
+
   function download(lat){
-    var WINDOW = 10000, PER = 3 * 1024 * 1024, MAX_TOTAL = 24 * 1024 * 1024, LANES = 2;
+    var WINDOW = 10000, MAX_TOTAL = 32 * 1024 * 1024, LANES = 2;
     var t0 = performance.now(), samples = [], got = 0, stopped = false, ctrls = [];
     function elapsed(){ return performance.now() - t0; }
     function stopAll(){
@@ -659,10 +675,16 @@ h1 em{font-style:normal;color:var(--amber)}
       }
       var ctrl = ("AbortController" in window) ? new AbortController() : null;
       if (ctrl) ctrls.push(ctrl);
-      return fetch(origin + "/api/speed?bytes=" + PER + "&cb=" + Math.random(),
+      return fetch(downloadUrl(origin),
           ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
         .then(function(r){
-          if (!r.ok) throw new Error("bad status");
+          if (!r.ok){
+            /* A missing payload file is not a network failure: fall back to
+               the function for the rest of this run rather than reporting a
+               dead connection. */
+            if (r.status === 404 && payloadOk){ payloadOk = false; return; }
+            throw new Error("status " + r.status);
+          }
           state.fails = 0;
           if (!r.body || !r.body.getReader){
             return r.arrayBuffer().then(function(buf){
@@ -682,9 +704,7 @@ h1 em{font-style:normal;color:var(--amber)}
           }
           return pump();
         })
-        .catch(function(){
-          if (!stopped) state.fails = (state.fails || 0) + 1;
-        })
+        .catch(function(){ if (!stopped) state.fails = (state.fails || 0) + 1; })
         .then(function(){
           if (!stopped && elapsed() < WINDOW && got < MAX_TOTAL) return one(origin, state);
         });
@@ -962,7 +982,10 @@ h1 em{font-style:normal;color:var(--amber)}
   function delta(now, was, higherBetter){
     if (now == null || was == null || !was) return { txt:"", cls:"flat" };
     var pc = (now - was)/was*100;
-    if (Math.abs(pc) < 8) return { txt:"about the same", cls:"flat" };
+    /* Back-to-back runs under identical conditions have differed by more than
+       a tenth on ordinary mobile lines, so anything smaller than this is the
+       network moving, not the VPN. */
+    if (Math.abs(pc) < 15) return { txt:"about the same", cls:"flat" };
     var better = higherBetter ? pc > 0 : pc < 0;
     var word = higherBetter ? (pc > 0 ? "faster" : "slower")
                             : (pc > 0 ? "higher" : "lower");
@@ -1075,9 +1098,9 @@ h1 em{font-style:normal;color:var(--amber)}
                              loss(now.latency,base.latency,false)].indexOf(worst)] || "speed";
       $("spText").textContent =
           worst > 50 ? "Your VPN costs you a lot, mostly in " + worstName
-        : worst > 20 ? "Your VPN has a noticeable cost in " + worstName
-        : worst > 8  ? "Your VPN costs you a little speed"
-        : worst > -8 ? "Your VPN barely slows you down"
+        : worst > 25 ? "Your VPN has a noticeable cost in " + worstName
+        : worst > 15 ? "Your VPN costs you a little speed"
+        : worst > -15 ? "Your VPN barely slows you down"
         : "Your connection got faster";
       var sub = "Without the VPN: " + fmt(base.down) + " Mbps down, " +
         fmt(base.up) + " Mbps up, " +

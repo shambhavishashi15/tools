@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free, honest web tools — no ads, nothing logged</title>
+<meta name="description" content="A small collection of free web tools that measure honestly and keep nothing: check whether your VPN is actually working, what it hides, and what it costs you in speed.">
+<!-- Swap the vercel.app URLs for your domain the day you attach it -->
+<link rel="canonical" href="https://tools-nine-orpin.vercel.app/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Free, honest web tools">
+<meta property="og:description" content="Tools that measure honestly and keep nothing. No ads, no accounts, no logs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0E14; --surface:#10151D; --ink:#E8EDF4; --slate:#95A1B2; --faint:#5D6977;
+  --rule:#1E2733; --rule-firm:#2D3948; --amber:#FFB224;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Space Grotesk",system-ui,sans-serif;font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(ellipse 90% 42% at 50% -8%, rgba(255,178,36,.07), transparent),
+    repeating-linear-gradient(0deg, transparent 0 47px, var(--rule) 47px 48px),
+    repeating-linear-gradient(90deg, transparent 0 47px, var(--rule) 47px 48px);
+  background-attachment:fixed;}
+.shell{max-width:780px;margin:0 auto;padding:0 22px}
+.mast{border-bottom:1px solid var(--rule)}
+.mast .shell{display:flex;align-items:center;height:58px}
+.brand{display:flex;align-items:center;gap:10px;font-family:"IBM Plex Mono",monospace;
+  font-size:14px;letter-spacing:.08em;font-weight:500}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--amber)}
+h1{font-size:clamp(26px,5.4vw,38px);font-weight:600;letter-spacing:-.025em;
+  line-height:1.12;margin:52px 0 12px}
+h1 em{font-style:normal;color:var(--amber)}
+.lede{color:var(--slate);margin:0 0 36px;font-size:16px;max-width:58ch;line-height:1.65}
+a.tool{display:block;background:var(--surface);border:1px solid var(--rule-firm);
+  border-radius:12px;padding:22px 24px;margin-bottom:16px;text-decoration:none;
+  color:inherit;position:relative;overflow:hidden}
+a.tool::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--amber)}
+a.tool:hover{border-color:var(--amber)}
+a.tool .k{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--amber);
+  letter-spacing:.16em;text-transform:uppercase;margin:0 0 8px}
+a.tool h2{font-size:20px;font-weight:600;margin:0 0 6px;letter-spacing:-.015em}
+a.tool p{margin:0;color:var(--slate);font-size:14.5px;max-width:58ch}
+.soon{border:1px dashed var(--rule-firm);border-radius:12px;padding:18px 24px;
+  color:var(--faint);font-size:14px}
+.foot{padding:36px 0 56px;color:var(--faint);font-size:13.5px}
+.foot p{margin:0 0 8px;max-width:66ch}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="shell">
+    <span class="brand"><span class="dot" aria-hidden="true"></span>TOOLS</span>
+  </div>
+</header>
+<div class="shell">
+  <h1>Small tools that <em>measure honestly</em></h1>
+  <p class="lede">No ads, no accounts, no logs, and no number on screen that the tool cannot stand behind. Built one at a time.</p>
+
+  <a class="tool" href="/vpn-check/">
+    <p class="k">Privacy</p>
+    <h2>Is your VPN actually working?</h2>
+    <p>Measures your connection before and after connecting: what your VPN really hides, what still leaks through WebRTC and IPv6, and what it costs you in download, upload and latency.</p>
+  </a>
+
+  <div class="soon">More tools are on the way. Everything here follows the same rules: measured in your browser, explained in plain language, nothing stored.</div>
+
+  <div class="foot">
+    <p>Your address is never written to a log or a database, and there are no third-party trackers on any page here.</p>
+  </div>
+</div>
+</body>
+</html>

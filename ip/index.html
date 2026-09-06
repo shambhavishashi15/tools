@@ -249,7 +249,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this one server. Download uses three parallel connections, the way dedicated speed tests do; latency is measured to the nearest edge of this site's network. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>Speed figures cover the route between you and this one server. Download uses three parallel connections, the way dedicated speed tests do; latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -286,7 +286,7 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 2;
+  var METHOD = 3;
   var staleBaselineWiped = false;
 
   var root=document.documentElement, tb=$("themeBtn");
@@ -492,13 +492,23 @@ h1 em{font-style:normal;color:var(--amber)}
     });
   }
 
-  /* XMLHttpRequest rather than fetch, because only XHR reports upload
-     progress, and without progress samples the ramp cannot be excluded.
-     Progress counts bytes handed to the network stack, which runs slightly
-     ahead of delivery; the ramp exclusion absorbs most of that. */
-  function upload(lat){
+  /* Upload is timed end to end: from send to the server's acknowledgment.
+     Progress events cannot be trusted for this, because they count bytes
+     handed to the operating system's send buffer rather than bytes delivered:
+     measured against three independent testers, the progress-based build
+     reported 8 Mbps on a line whose upload never exceeded 4 anywhere else.
+     End-to-end timing is immune to buffering. It includes one response trip,
+     which the measured latency subtracts, so it reads slightly conservative
+     rather than inflated. */
+  function uploadTarget(mbps){
+    /* Size the main pass to roughly four seconds of sending, clamped between
+       256 KB and 3.5 MB. The platform rejects request bodies over 4.5 MB. */
+    return Math.round(Math.max(262144, Math.min(3670016, mbps * 1e6 / 8 * 4)));
+  }
+
+  function uploadOnce(bytes, lat){
     return new Promise(function(resolve){
-      var bytes = 1536 * 1024, data;
+      var data;
       try{
         data = new Uint8Array(bytes);
         for (var at = 0; at < bytes; at += 65536){
@@ -506,24 +516,38 @@ h1 em{font-style:normal;color:var(--amber)}
         }
       }catch(e){ return resolve(null); }
       var xhr = new XMLHttpRequest();
-      var t0 = performance.now(), samples = [], settled = false;
-      function finish(){
+      var t0 = performance.now(), settled = false;
+      var timer = setTimeout(function(){
+        if (settled) return; settled = true;
+        try{ xhr.abort(); }catch(e){}
+        /* An aborted pass yields no server acknowledgment, so there is no
+           honest number to report for it. */
+        resolve(null);
+      }, 10000);
+      xhr.onloadend = function(){
         if (settled) return; settled = true;
         clearTimeout(timer);
-        var sent = samples.length ? samples[samples.length-1].b : 0;
-        if (!sent && xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) sent = bytes;
-        if (!sent) return resolve(null);
-        resolve(steadyRate(samples, performance.now() - t0, sent, lat));
-      }
-      var timer = setTimeout(function(){ try{ xhr.abort(); }catch(e){} finish(); }, 6000);
+        if (xhr.status < 200 || xhr.status >= 300) return resolve(null);
+        var ms = (performance.now() - t0) - (lat || 0);
+        if (ms <= 0) return resolve(null);
+        resolve((bytes * 8) / (ms / 1000) / 1e6);
+      };
       try{
         xhr.open("POST", "/api/speed?cb=" + Math.random());
-        xhr.upload.onprogress = function(e){
-          samples.push({ t: performance.now() - t0, b: e.loaded });
-        };
-        xhr.onloadend = finish;
         xhr.send(new Blob([data]));
-      }catch(e){ clearTimeout(timer); resolve(null); }
+      }catch(e){ clearTimeout(timer); if(!settled){ settled=true; resolve(null); } }
+    });
+  }
+
+  function upload(lat){
+    /* A small probe first, to learn roughly what the line can do, then a main
+       pass sized to it. A fixed payload is either too small to measure a fast
+       line or takes half a minute on a slow one. */
+    return uploadOnce(262144, lat).then(function(probe){
+      if (probe == null) return null;
+      return uploadOnce(uploadTarget(probe), lat).then(function(main){
+        return main != null ? main : probe;
+      });
     });
   }
 

@@ -267,6 +267,19 @@ h1 em{font-style:normal;color:var(--amber)}
     </div>
   </div>
 
+  <div class="card hidden" id="geoCard">
+    <div class="chead">
+      <p class="ctitle">Where sites place you</p>
+      <p class="vsub" id="geoLine" style="margin:0 0 16px"></p>
+      <div class="row">
+        <button class="btn ghost" id="geoBtn">Measure the real gap</button>
+        <span class="hint" id="geoHint"></span>
+      </div>
+      <p class="vsub hidden" id="geoOut" style="margin:16px 0 0"></p>
+      <p class="hint" style="margin-top:12px">Uses your device's position with your permission, entirely inside this browser. The coordinates are never sent anywhere, including to this site.</p>
+    </div>
+  </div>
+
   <div class="card hidden" id="histCard">
     <div class="chead">
       <p class="ctitle">Past checks</p>
@@ -326,6 +339,23 @@ h1 em{font-style:normal;color:var(--amber)}
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
+  var lastGeo = null;
+
+  /* Great-circle distance. The point of the feature is a single honest
+     number: how far the internet's idea of you sits from the device itself. */
+  function haversineKm(lat1, lon1, lat2, lon2){
+    var R = 6371, rad = Math.PI / 180;
+    var dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*rad) * Math.cos(lat2*rad) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  function fmtKm(km){
+    if (km < 1) return "under a kilometre";
+    if (km < 100) return "about " + Math.round(km) + " km";
+    return "about " + (Math.round(km / 10) * 10).toLocaleString() + " km";
+  }
 
   /* Grade bands are a plain mapping of the hidden percentage; nothing else
      feeds them, so the letter can always be reconciled with the gauge. */
@@ -690,6 +720,8 @@ h1 em{font-style:normal;color:var(--amber)}
               country: id.countryName || id.country || null,
               org: id.org || null,
               apiTz: id.timezone || null,
+              lat: (typeof id.latitude === "number") ? id.latitude : null,
+              lon: (typeof id.longitude === "number") ? id.longitude : null,
               tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
                                catch(e){ return null; } })(),
               rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
@@ -1015,6 +1047,18 @@ h1 em{font-style:normal;color:var(--amber)}
     saveHist(lastReport);
     renderHist();
     $("shareRow").classList.remove("hidden");
+
+    if (now.lat != null && now.lon != null){
+      lastGeo = { lat: now.lat, lon: now.lon,
+                  place: [now.city, now.country].filter(Boolean).join(", ") || "an unknown place",
+                  pct: cmp.pct };
+      $("geoLine").textContent = "Right now, websites place this connection in " + lastGeo.place +
+        ". That is a guess made from your address block, not from your device.";
+      $("geoOut").classList.add("hidden");
+      $("geoCard").classList.remove("hidden");
+    } else {
+      $("geoCard").classList.add("hidden");
+    }
   }
 
   /* ---------- stages ---------- */
@@ -1108,6 +1152,39 @@ h1 em{font-style:normal;color:var(--amber)}
       hint.textContent = "Clipboard unavailable in this browser";
     }
   });
+  $("geoBtn").addEventListener("click", function(){
+    if (!lastGeo) return;
+    var hint = $("geoHint"), out = $("geoOut");
+    if (!navigator.geolocation){
+      hint.textContent = "This browser does not offer device position.";
+      return;
+    }
+    hint.textContent = "Waiting for permission…";
+    navigator.geolocation.getCurrentPosition(function(pos){
+      hint.textContent = "";
+      var km = haversineKm(pos.coords.latitude, pos.coords.longitude, lastGeo.lat, lastGeo.lon);
+      var msg = "Websites place you " + fmtKm(km) + " from where this device actually is.";
+      /* The same number means opposite things depending on whether hiding is
+         in effect, so the reading is framed by the last comparison. */
+      if (lastGeo.pct >= 50 && km >= 100){
+        msg += " A large gap with a VPN working is the hiding doing its job.";
+      } else if (lastGeo.pct >= 50 && km < 100){
+        msg += " A small gap while a VPN is on means sites can still place you near your real location.";
+      } else {
+        msg += " A gap like this is normal without a VPN: addresses are located by provider infrastructure, such as a mobile carrier's gateway city, not by your device.";
+      }
+      if (pos.coords.accuracy && pos.coords.accuracy > 25000){
+        msg += " Your device's own fix is rough here (±" + Math.round(pos.coords.accuracy/1000) + " km), so treat the number as approximate.";
+      }
+      out.textContent = msg;
+      out.classList.remove("hidden");
+    }, function(err){
+      hint.textContent = err && err.code === 1
+        ? "Permission declined — nothing was measured."
+        : "Device position was unavailable. Nothing was measured.";
+    }, { timeout: 15000, maximumAge: 60000 });
+  });
+
   $("histClear").addEventListener("click", function(){
     store.del(HKEY);
     renderHist();

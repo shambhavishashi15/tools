@@ -1,0 +1,6 @@
+{
+  "redirects": [
+    { "source": "/ip", "destination": "/vpn-check/", "permanent": true },
+    { "source": "/ip/:path*", "destination": "/vpn-check/:path*", "permanent": true }
+  ]
+}

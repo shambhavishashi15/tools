@@ -160,6 +160,22 @@ h1 em{font-style:normal;color:var(--amber)}
 .sp .d{font-size:13px;margin:5px 0 0;font-family:"IBM Plex Mono",monospace}
 .d.up{color:var(--pass)} .d.down{color:var(--danger)} .d.flat{color:var(--faint)}
 
+/* ---------- history ---------- */
+.histwrap{overflow-x:auto}
+.histtable{width:100%;border-collapse:collapse;font-size:13px;min-width:540px}
+.histtable th{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faint);
+  letter-spacing:.1em;text-transform:uppercase;text-align:left;font-weight:500;
+  padding:0 14px 9px 0;border-bottom:1px solid var(--rule)}
+.histtable td{padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);
+  color:var(--slate);white-space:nowrap}
+.histtable tr:last-child td{border-bottom:0}
+.histtable td.num{font-family:"IBM Plex Mono",monospace;color:var(--ink)}
+.gchip{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;
+  padding:2px 9px;border-radius:4px}
+.gchip.p{background:var(--pass-bg);color:var(--pass)}
+.gchip.w{background:var(--warn-bg);color:var(--warn)}
+.gchip.d{background:var(--danger-bg);color:var(--danger)}
+
 /* ---------- footer ---------- */
 .foot{padding:30px 0 56px;color:var(--faint);font-size:13.5px}
 .foot p{margin:0 0 9px;max-width:68ch;line-height:1.65}
@@ -225,6 +241,10 @@ h1 em{font-style:normal;color:var(--amber)}
         </div>
       </div>
       <div id="riskBox"></div>
+      <div class="row hidden" id="shareRow" style="margin-top:20px">
+        <button class="btn ghost" id="shareBtn">Copy my report</button>
+        <span class="hint" id="shareHint"></span>
+      </div>
     </div>
     <div class="drawer" id="drawer">
       <button class="dtoggle" id="dToggle" aria-expanded="false">
@@ -244,6 +264,22 @@ h1 em{font-style:normal;color:var(--amber)}
       <div class="sp"><p class="k">Download</p><p class="v" id="dlNow">&mdash;</p><p class="d" id="dlDelta"></p></div>
       <div class="sp"><p class="k">Upload</p><p class="v" id="ulNow">&mdash;</p><p class="d" id="ulDelta"></p></div>
       <div class="sp"><p class="k">Latency</p><p class="v" id="ltNow">&mdash;</p><p class="d" id="ltDelta"></p></div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="histCard">
+    <div class="chead">
+      <p class="ctitle">Past checks</p>
+      <div class="histwrap">
+        <table class="histtable">
+          <thead><tr><th>When</th><th>Exit</th><th>Grade</th><th>Hidden</th><th>Down</th><th>Up</th><th>Ping</th></tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn ghost" id="histClear">Clear history</button>
+        <span class="hint">Stored only on this device. Compare servers by switching your VPN's exit and running again.</span>
+      </div>
     </div>
   </div>
 
@@ -288,6 +324,82 @@ h1 em{font-style:normal;color:var(--amber)}
      of the code change rather than of the VPN. */
   var METHOD = 3;
   var staleBaselineWiped = false;
+  var HKEY = "vpncheck.history.v1";
+  var lastReport = null;
+
+  /* Grade bands are a plain mapping of the hidden percentage; nothing else
+     feeds them, so the letter can always be reconciled with the gauge. */
+  function grade(pct){
+    return pct >= 100 ? "A+" : pct >= 90 ? "A" : pct >= 70 ? "B"
+         : pct >= 50 ? "C" : pct >= 25 ? "D" : "F";
+  }
+  function shareBars(pct){
+    var filled = Math.round(pct / 10), out = "";
+    for (var i = 0; i < 10; i++) out += i < filled ? "\u2593" : "\u2591";
+    return out;
+  }
+  /* The share text restates only what the report itself shows: same
+     percentage, same item states, same speed deltas. Nothing is added for
+     effect, so a pasted card can always be checked against a fresh run. */
+  function buildShare(e, url){
+    var lines = [
+      "VPN Check \u2014 grade " + grade(e.pct),
+      shareBars(e.pct) + " " + e.pct + "% of identifying details hidden"
+    ];
+    if (e.hiddenNames.length) lines.push("Hidden: " + e.hiddenNames.join(", "));
+    if (e.exposed.length) lines.push("Still visible: " + e.exposed.join(", "));
+    var costs = [];
+    if (e.dDown != null && e.dDown > 8) costs.push(Math.round(e.dDown) + "% download");
+    if (e.dUp != null && e.dUp > 8) costs.push(Math.round(e.dUp) + "% upload");
+    if (e.dLat != null && e.dLat > 8) costs.push(Math.round(e.dLat) + "% latency");
+    if (costs.length) lines.push("Speed cost: " + costs.join(", "));
+    else if (e.dDown != null || e.dUp != null) lines.push("No meaningful speed cost");
+    lines.push(url);
+    return lines.join("\n");
+  }
+
+  function loadHist(){
+    try{
+      var raw = store.get(HKEY);
+      if (!raw) return [];
+      var list = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+      /* Entries measured with an older method carry numbers that are not
+         comparable to current ones, so they are dropped rather than shown
+         beside them. */
+      return list.filter(function(e){ return e && e.v === METHOD; });
+    }catch(e){ return []; }
+  }
+  function saveHist(entry){
+    var list = loadHist();
+    list.unshift(entry);
+    try{ store.set(HKEY, JSON.stringify(list.slice(0, 8))); }catch(e){}
+  }
+  function fmtWhen(ts){
+    var d = new Date(ts), t = new Date();
+    var hm = ("0"+d.getHours()).slice(-2) + ":" + ("0"+d.getMinutes()).slice(-2);
+    return d.toDateString() === t.toDateString()
+      ? hm : (d.getDate() + "/" + (d.getMonth()+1) + " " + hm);
+  }
+  function renderHist(){
+    var list = loadHist(), card = $("histCard"), body = $("histBody");
+    if (!list.length){ card.classList.add("hidden"); return; }
+    card.classList.remove("hidden");
+    var html = "";
+    list.forEach(function(e){
+      var band = e.pct >= 80 ? "p" : e.pct >= 40 ? "w" : "d";
+      html += "<tr>" +
+        "<td>" + esc(fmtWhen(e.at)) + "</td>" +
+        "<td>" + esc(e.exit || "unknown") + "</td>" +
+        '<td><span class="gchip ' + band + '">' + grade(e.pct) + "</span></td>" +
+        '<td class="num">' + e.pct + "%</td>" +
+        '<td class="num">' + (e.down == null ? "\u2014" : (e.down >= 100 ? e.down.toFixed(0) : e.down.toFixed(1))) + "</td>" +
+        '<td class="num">' + (e.up == null ? "\u2014" : (e.up >= 100 ? e.up.toFixed(0) : e.up.toFixed(1))) + "</td>" +
+        '<td class="num">' + (e.lat == null ? "\u2014" : e.lat.toFixed(0) + "ms") + "</td>" +
+        "</tr>";
+    });
+    body.innerHTML = html;
+  }
 
   var root=document.documentElement, tb=$("themeBtn");
   function theme(t){ root.setAttribute("data-theme",t); tb.textContent = t==="dark"?"Light":"Dark"; }
@@ -856,6 +968,27 @@ h1 em{font-style:normal;color:var(--amber)}
       }
       $("spSub").textContent = sub;
     }
+
+    /* ---------- record + share ---------- */
+    var SHORT = { "Your IP address":"IP address", "Your network provider":"Provider",
+                  "Your country and city":"Location", "Your address via WebRTC":"WebRTC",
+                  "Your IPv6 address":"IPv6" };
+    lastReport = {
+      v: METHOD,
+      at: now.at || Date.now(),
+      pct: cmp.pct,
+      hiddenNames: cmp.items.filter(function(i){ return i.state === "hidden"; })
+                            .map(function(i){ return SHORT[i.name] || i.name; }),
+      exposed: cmp.exposed.map(function(i){ return SHORT[i.name] || i.name; }),
+      exit: [now.country, now.org].filter(Boolean).join(" · ") || "unknown",
+      down: now.down, up: now.up, lat: now.latency,
+      dDown: loss(now.down, base.down, true),
+      dUp: loss(now.up, base.up, true),
+      dLat: loss(now.latency, base.latency, false)
+    };
+    saveHist(lastReport);
+    renderHist();
+    $("shareRow").classList.remove("hidden");
   }
 
   /* ---------- stages ---------- */
@@ -916,6 +1049,7 @@ h1 em{font-style:normal;color:var(--amber)}
     }).catch(function(){
       $("stageHint").textContent="Something went wrong. Try again.";
       setStage(loadBase() ? "ready" : "empty");
+  renderHist();
   if (staleBaselineWiped){
     $("stageHint").textContent = "The measurement method was updated, so a fresh baseline is needed.";
   }
@@ -937,8 +1071,24 @@ h1 em{font-style:normal;color:var(--amber)}
     var open=$("drawer").classList.toggle("open");
     this.setAttribute("aria-expanded", open?"true":"false");
   });
+  $("shareBtn").addEventListener("click", function(){
+    if (!lastReport) return;
+    var text = buildShare(lastReport, location.origin + location.pathname);
+    var hint = $("shareHint");
+    function ok(){ hint.textContent = "Copied — paste it anywhere"; setTimeout(function(){ hint.textContent = ""; }, 2600); }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ hint.textContent = "Copy blocked by the browser"; });
+    } else {
+      hint.textContent = "Clipboard unavailable in this browser";
+    }
+  });
+  $("histClear").addEventListener("click", function(){
+    store.del(HKEY);
+    renderHist();
+  });
 
   setStage(loadBase() ? "ready" : "empty");
+  renderHist();
   if (staleBaselineWiped){
     $("stageHint").textContent = "The measurement method was updated, so a fresh baseline is needed.";
   }

@@ -348,7 +348,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this one server. Download uses three parallel connections, the way dedicated speed tests do; latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>Speed figures cover the route between you and this one server. Download keeps the line continuously filled for up to ten seconds, the way dedicated speed tests do, so long routes have time to reach full speed; latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -385,103 +385,10 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 3;
+  var METHOD = 4;
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
-  var lastGeo = null;
-
-  /* Great-circle distance. The point of the feature is a single honest
-     number: how far the internet's idea of you sits from the device itself. */
-  function haversineKm(lat1, lon1, lat2, lon2){
-    var R = 6371, rad = Math.PI / 180;
-    var dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
-    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1*rad) * Math.cos(lat2*rad) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-    return 2 * R * Math.asin(Math.sqrt(a));
-  }
-  /* City names come from a static list served by this site and matched on
-     the device, because the alternative, a geocoding service, would mean
-     sending the visitor's coordinates to a third party. The list downloads
-     only after the person grants permission, and the download itself carries
-     no location: it is the same file for everyone. */
-  var PINKEY = "vpncheck.pincity.v1";
-  var cityListPromise = null;
-  function fetchCities(){
-    if (!cityListPromise){
-      cityListPromise = fetch("/cities-min.json", { cache: "force-cache" })
-        .then(function(r){ if (!r.ok) throw new Error("cities"); return r.json(); })
-        .catch(function(e){ cityListPromise = null; throw e; });
-    }
-    return cityListPromise;
-  }
-  function nearestCity(lat, lon, list){
-    var best = null, bestD = Infinity;
-    for (var i = 0; i < list.length; i++){
-      var d = haversineKm(lat, lon, list[i][2], list[i][3]);
-      if (d < bestD){ bestD = d; best = list[i]; }
-    }
-    return best ? { name: best[0], country: best[1], km: bestD } : null;
-  }
-
-  function runCityPin(auto){
-    var hint = $("cityPinHint"), out = $("cityPinOut"), btn = $("cityPinBtn");
-    if (!hint || !navigator.geolocation) return;
-    if (!auto) hint.textContent = "Waiting for permission…";
-    navigator.geolocation.getCurrentPosition(function(pos){
-      hint.textContent = "Finding the nearest city…";
-      fetchCities().then(function(list){
-        var here = nearestCity(pos.coords.latitude, pos.coords.longitude, list);
-        hint.textContent = "";
-        if (!here){ hint.textContent = "Could not match a city."; return; }
-        store.set(PINKEY, "1");
-        if (btn) btn.textContent = "Refresh my city";
-        var msg = "Your device puts you in " + here.name + ", " + here.country +
-                  (here.km > 25 ? " (nearest listed city, " + fmtKm(here.km) + " away)" : "") + ".";
-        if (lastGeo){
-          var gap = haversineKm(pos.coords.latitude, pos.coords.longitude, lastGeo.lat, lastGeo.lon);
-          if (lastGeo.pct >= 50 && gap >= 100){
-            msg += " Websites currently place this connection " + fmtKm(gap) + " away, in " + lastGeo.place + " — that distance is the VPN hiding you.";
-          } else if (lastGeo.pct >= 50){
-            msg += " Websites place you only " + fmtKm(gap) + " away despite the VPN, so sites can still put you near your real location.";
-          } else {
-            msg += " Websites guess " + lastGeo.place + ", " + fmtKm(gap) + " off — normal, since addresses are located by provider infrastructure, not by your device.";
-          }
-        }
-        out.textContent = msg;
-        out.classList.remove("hidden");
-      }).catch(function(){ hint.textContent = "The city list could not load. Try again."; });
-    }, function(err){
-      if (!auto){
-        hint.textContent = err && err.code === 1
-          ? "Permission declined — the guessed city stays."
-          : "Device position unavailable.";
-      }
-    }, { timeout: 15000, maximumAge: 120000 });
-  }
-
-  /* Called after every drawer render: wires the button, and if the person
-     opted in on an earlier run, refreshes the pinned city without asking
-     again. The browser remembers the grant, so no prompt reappears. */
-  function wireCityPin(){
-    var btn = $("cityPinBtn");
-    if (!btn) return;
-    btn.addEventListener("click", function(){ runCityPin(false); });
-    if (store.get(PINKEY)){
-      btn.textContent = "Refresh my city";
-      runCityPin(true);
-    }
-  }
-
-  function fmtKm(km){
-    if (km < 1) return "under a kilometre";
-    if (km < 100) return "about " + Math.round(km) + " km";
-    return "about " + (Math.round(km / 10) * 10).toLocaleString() + " km";
-  }
-
-  /* Grade bands are a plain mapping of the hidden percentage; nothing else
-     feeds them, so the letter can always be reconciled with the gauge. */
   function grade(pct){
     return pct >= 100 ? "A+" : pct >= 90 ? "A" : pct >= 70 ? "B"
          : pct >= 50 ? "C" : pct >= 25 ? "D" : "F";
@@ -696,7 +603,9 @@ h1 em{font-style:normal;color:var(--amber)}
   function steadyRate(samples, totalMs, totalBytes, latMs){
     if (samples.length >= 3){
       var first = samples[0], last = samples[samples.length-1];
-      var rampEnd = first.t + Math.max(250, (last.t - first.t) * 0.2);
+      /* On a long route TCP spends whole seconds warming up, and that
+         warm-up is exactly what must not be averaged into the result. */
+      var rampEnd = first.t + Math.max(1500, (last.t - first.t) * 0.3);
       var s0 = null;
       for (var i = 0; i < samples.length; i++){
         if (samples[i].t >= rampEnd){ s0 = samples[i]; break; }
@@ -710,26 +619,37 @@ h1 em{font-style:normal;color:var(--amber)}
     return (totalBytes * 8) / (transfer / 1000) / 1e6;
   }
 
-  /* Three parallel streams, summed. A single TCP connection is capped by
-     window size divided by round-trip time, so over a long route it reports a
-     fraction of what the line carries: measured against a well-known parallel
-     tester, the single-stream build showed 0.5 Mbps on a link doing 3.2.
-     Parallel connections are how every serious speed test defeats this.
-     Still capped at 8 seconds; whatever arrived by then is judged. */
+  /* Browsers multiplex every same-origin request onto ONE HTTP/2
+     connection, so "parallel" fetches share a single TCP congestion window.
+     An earlier build issued three fetches totalling 4.5 MB and believed it
+     had parallel streams; on a 500 ms route the transfer completed while TCP
+     was still warming up, and the tool read 1.6 Mbps on a link independently
+     measured at 18. The only honest fix on one origin is time: keep the
+     connection continuously filled for a ten-second window, two requests in
+     flight and the next launched as each completes, then measure the steady
+     portion after the ramp. Capped at 24 MB so fast lines do not drain the
+     bandwidth budget. */
   function download(lat){
-    var STREAMS = 3, bytesEach = 1536 * 1024;
-    var ctrl = ("AbortController" in window) ? new AbortController() : null;
-    var t0 = performance.now(), samples = [], got = 0;
-    var timer = setTimeout(function(){ if (ctrl) ctrl.abort(); }, 8000);
+    var WINDOW = 10000, PER = 3 * 1024 * 1024, MAX_TOTAL = 24 * 1024 * 1024, LANES = 2;
+    var t0 = performance.now(), samples = [], got = 0, stopped = false, ctrls = [];
+    function elapsed(){ return performance.now() - t0; }
+    function stopAll(){
+      stopped = true;
+      ctrls.forEach(function(c){ try{ c.abort(); }catch(e){} });
+    }
+    var timer = setTimeout(stopAll, WINDOW);
 
     function one(){
-      return fetch("/api/speed?bytes="+bytesEach+"&cb="+Math.random(),
+      if (stopped || elapsed() >= WINDOW || got >= MAX_TOTAL) return Promise.resolve();
+      var ctrl = ("AbortController" in window) ? new AbortController() : null;
+      if (ctrl) ctrls.push(ctrl);
+      return fetch("/api/speed?bytes=" + PER + "&cb=" + Math.random(),
           ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
         .then(function(r){
           if (!r.body || !r.body.getReader){
             return r.arrayBuffer().then(function(buf){
               got += buf.byteLength;
-              samples.push({ t: performance.now() - t0, b: got });
+              samples.push({ t: elapsed(), b: got });
             });
           }
           var reader = r.body.getReader();
@@ -737,23 +657,25 @@ h1 em{font-style:normal;color:var(--amber)}
             return reader.read().then(function(res){
               if (res.done) return;
               got += res.value.length;
-              samples.push({ t: performance.now() - t0, b: got });
+              samples.push({ t: elapsed(), b: got });
+              if (got >= MAX_TOTAL) stopAll();
               return pump();
             });
           }
           return pump();
         })
-        .catch(function(){ /* aborted at the cap or dropped: keep what arrived */ });
+        .catch(function(){ /* aborted at the window edge: keep what arrived */ })
+        .then(function(){
+          if (!stopped && elapsed() < WINDOW && got < MAX_TOTAL) return one();
+        });
     }
 
-    var runs = [];
-    for (var i = 0; i < STREAMS; i++) runs.push(one());
-    return Promise.all(runs).then(function(){
+    var lanes = [];
+    for (var i = 0; i < LANES; i++) lanes.push(one());
+    return Promise.all(lanes).then(function(){
       clearTimeout(timer);
       if (!got) return null;
-      /* The shared byte counter merges the streams, so the samples already
-         describe combined throughput over time. */
-      return steadyRate(samples, performance.now() - t0, got, lat);
+      return steadyRate(samples, elapsed(), got, lat);
     });
   }
 
@@ -1088,12 +1010,6 @@ h1 em{font-style:normal;color:var(--amber)}
                 esc(i.is==null?"unknown":i.is)+'</p>';
       }
       if (i.why) html += '<p class="why">'+esc(i.why)+'</p>';
-      if (i.name === "Your country and city"){
-        html += '<div class="row" style="margin-top:11px">' +
-          '<button class="btn ghost" id="cityPinBtn" style="padding:7px 14px;font-size:13.5px">Pin my exact city</button>' +
-          '<span class="hint" id="cityPinHint"></span></div>' +
-          '<p class="why hidden" id="cityPinOut" style="margin-top:9px"></p>';
-      }
       html += '</div>';
     });
     $("dBody").innerHTML = html;
@@ -1177,12 +1093,6 @@ h1 em{font-style:normal;color:var(--amber)}
     renderHist();
     $("shareRow").classList.remove("hidden");
 
-    lastGeo = (now.lat != null && now.lon != null)
-      ? { lat: now.lat, lon: now.lon,
-          place: [now.city, now.country].filter(Boolean).join(", ") || "the guessed city",
-          pct: cmp.pct }
-      : null;
-    wireCityPin();
   }
 
   /* ---------- stages ---------- */

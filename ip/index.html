@@ -817,9 +817,20 @@ h1 em{font-style:normal;color:var(--amber)}
         : worst > 8  ? "Your VPN costs you a little speed"
         : worst > -8 ? "Your VPN barely slows you down"
         : "Your connection got faster";
-      $("spSub").textContent = "Without the VPN: " + fmt(base.down) + " Mbps down, " +
+      var sub = "Without the VPN: " + fmt(base.down) + " Mbps down, " +
         fmt(base.up) + " Mbps up, " +
         (base.latency==null ? "—" : base.latency.toFixed(0)) + " ms latency.";
+      /* A speed comparison against a baseline from hours ago measures the
+         time of day as much as the VPN: this line has swung between 2 and 8
+         Mbps across a single session. The leak comparison is unaffected, but
+         a stale speed baseline deserves an explicit warning, not a footnote. */
+      var ageMin = (now.at && base.at) ? Math.round((now.at - base.at) / 60000) : null;
+      if (ageMin != null && ageMin > 45){
+        var ageTxt = ageMin < 120 ? ("about " + ageMin + " minutes")
+                                  : ("about " + Math.round(ageMin/60) + " hours");
+        sub += " That baseline is " + ageTxt + " old, and line speed changes across the day, so retake it before trusting the speed change.";
+      }
+      $("spSub").textContent = sub;
     }
   }
 

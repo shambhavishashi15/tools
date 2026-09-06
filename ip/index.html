@@ -889,9 +889,25 @@ h1 em{font-style:normal;color:var(--amber)}
     ring.setAttribute("class", "gfill " + (cmp.pct>=80 ? "p" : cmp.pct>=40 ? "w" : "d"));
     ring.style.strokeDashoffset = String((2*Math.PI*52) * (1 - cmp.pct/100));
 
+    var st = {};
+    cmp.items.forEach(function(i){ st[i.name] = i.state; });
+
     var risk = "";
     if (none && cmp.measured){
       risk = '<div class="risk"><p>Nothing changed between the two checks. Either the VPN did not connect, or it is not covering this browser. Right now you have the same exposure you would have with it switched off.</p></div>';
+    } else if (st["Your IP address"] === "hidden" &&
+               st["Your network provider"] === "exposed" &&
+               st["Your country and city"] === "exposed"){
+      /* An address that changed while its operator and location stayed put is
+         a distinctive signature with only two explanations, and neither is a
+         working off-to-on comparison: either the baseline was taken with the
+         VPN already connected and the check ran on another server of the same
+         provider, or no VPN is covering this browser and the carrier simply
+         rotated the address between runs, which mobile networks do freely.
+         In the second case real protection is zero while the per-item view
+         shows a passing address row, so this pattern must be named rather
+         than left for the reader to spot. */
+      risk = '<div class="risk"><p>Your address changed, but your provider and location did not. That pattern means one of two things: the baseline was taken with the VPN already on, or no VPN is covering this browser and your address simply rotated on its own, which mobile networks do. Either way this is not a clean before-and-after. Start over, take the baseline with the VPN fully off, then run the check with it on.</p></div>';
     } else if (cmp.exposed.length){
       var names = cmp.exposed.map(function(i){ return i.name.replace(/^Your /,""); }).join(" and ");
       risk = '<div class="risk"><p>Your ' + esc(names) + ' can still be seen. Anything that gets past the tunnel can be used to identify you, which is the one thing a VPN is meant to prevent. The details below say what to change.</p></div>';

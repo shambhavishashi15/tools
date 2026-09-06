@@ -337,7 +337,7 @@ h1 em{font-style:normal;color:var(--amber)}
     <p>Browsers ship a built-in calling system, WebRTC, that discovers your network address so calls can connect directly. Any page can quietly ask it for that address, with no permission prompt, and the answer can come from outside your VPN tunnel. That is a WebRTC leak: your real address on display while the VPN icon says connected. Browser-extension VPNs are especially prone to it, because they route web traffic but usually not WebRTC. This check compares the address WebRTC hands out against the address the site actually sees, which is the test that matters.</p>
 
     <h2>Why is my VPN slow?</h2>
-    <p>Every packet takes a detour through the VPN server and gets encrypted on the way, so some cost is normal; how much depends on the server's distance and load. The honest way to size it is to measure the same route before and after connecting, at the same time of day &mdash; line speed drifts across the day, which is why this page warns you when your baseline has gone stale. Free servers commonly cost more than half of your bandwidth; a good paid server nearby can cost almost nothing.</p>
+    <p>Every packet takes a detour through the VPN server and gets encrypted on the way, so some cost is normal; how much depends on the server's distance and load. The honest way to size it is to measure the same route before and after connecting, at the same time of day &mdash; line speed drifts across the day, which is why this page warns you when your baseline has gone stale. Free servers commonly cost more than half of your bandwidth; a good paid server nearby can cost almost nothing. One more wrinkle: many relays limit speed per connection, so a single download can crawl even when a speed test, which opens many connections at once, shows a healthy total. This page measures with parallel connections too, so its number lines up with other testers.</p>
 
     <h2>Does a VPN hide my location?</h2>
     <p>It hides the location guessed from your address, which moves to the VPN server's city. It does not move your device's clock or its actual position, so a site that compares your timezone with your address can still tell a VPN is in use even though it cannot see through it. Location from an address is approximate anyway: it points at provider infrastructure, often a mobile carrier's gateway city many kilometres away, not at your device. The details drawer above can measure that gap precisely, on your device, with your permission.</p>
@@ -348,7 +348,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="foot">
     <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this one server. Download keeps the line continuously filled for up to ten seconds, the way dedicated speed tests do, so long routes have time to reach full speed; latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>Speed figures cover the route between you and this one server. Download opens parallel connections, keeps them filled for up to ten seconds and sums them, the way dedicated speed tests measure, so its number is comparable to theirs. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -385,7 +385,7 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 4;
+  var METHOD = 5;
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
@@ -619,16 +619,30 @@ h1 em{font-style:normal;color:var(--amber)}
     return (totalBytes * 8) / (transfer / 1000) / 1e6;
   }
 
-  /* Browsers multiplex every same-origin request onto ONE HTTP/2
-     connection, so "parallel" fetches share a single TCP congestion window.
-     An earlier build issued three fetches totalling 4.5 MB and believed it
-     had parallel streams; on a 500 ms route the transfer completed while TCP
-     was still warming up, and the tool read 1.6 Mbps on a link independently
-     measured at 18. The only honest fix on one origin is time: keep the
-     connection continuously filled for a ten-second window, two requests in
-     flight and the next launched as each completes, then measure the steady
-     portion after the ramp. Capped at 24 MB so fast lines do not drain the
-     bandwidth budget. */
+  /* A browser grants ONE TCP connection per origin over HTTP/2, so real
+     parallelism, the kind every dedicated speed test uses, needs real extra
+     origins. Each entry below must serve the same /api/speed; entries that do
+     not answer are dropped after two failures and cost nothing. Today the
+     list is the production host plus Vercel's branch alias. On domain day,
+     replace it with speed1..speed4 subdomains pointed at this same project
+     for full parity with aggregate testers. */
+  var SPEED_ORIGINS = [
+    "https://tools-git-main-personaltools1.vercel.app"
+  ];
+  function speedOrigins(){
+    var out = [location.origin];
+    SPEED_ORIGINS.forEach(function(o){
+      o = String(o).replace(/\/+$/, "");
+      if (o && o !== location.origin && out.indexOf(o) < 0) out.push(o);
+    });
+    return out;
+  }
+
+  /* Download: every origin's connection kept continuously filled for a
+     ten-second window, all bytes summed into one sample stream, rate taken
+     from the steady portion after TCP's warm-up. This matches how dedicated
+     testers measure, so the headline is comparable to theirs, including
+     through VPN relays that limit each connection separately. */
   function download(lat){
     var WINDOW = 10000, PER = 3 * 1024 * 1024, MAX_TOTAL = 24 * 1024 * 1024, LANES = 2;
     var t0 = performance.now(), samples = [], got = 0, stopped = false, ctrls = [];
@@ -639,13 +653,17 @@ h1 em{font-style:normal;color:var(--amber)}
     }
     var timer = setTimeout(stopAll, WINDOW);
 
-    function one(){
-      if (stopped || elapsed() >= WINDOW || got >= MAX_TOTAL) return Promise.resolve();
+    function one(origin, state){
+      if (stopped || elapsed() >= WINDOW || got >= MAX_TOTAL || state.fails >= 2){
+        return Promise.resolve();
+      }
       var ctrl = ("AbortController" in window) ? new AbortController() : null;
       if (ctrl) ctrls.push(ctrl);
-      return fetch("/api/speed?bytes=" + PER + "&cb=" + Math.random(),
+      return fetch(origin + "/api/speed?bytes=" + PER + "&cb=" + Math.random(),
           ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
         .then(function(r){
+          if (!r.ok) throw new Error("bad status");
+          state.fails = 0;
           if (!r.body || !r.body.getReader){
             return r.arrayBuffer().then(function(buf){
               got += buf.byteLength;
@@ -664,14 +682,19 @@ h1 em{font-style:normal;color:var(--amber)}
           }
           return pump();
         })
-        .catch(function(){ /* aborted at the window edge: keep what arrived */ })
+        .catch(function(){
+          if (!stopped) state.fails = (state.fails || 0) + 1;
+        })
         .then(function(){
-          if (!stopped && elapsed() < WINDOW && got < MAX_TOTAL) return one();
+          if (!stopped && elapsed() < WINDOW && got < MAX_TOTAL) return one(origin, state);
         });
     }
 
     var lanes = [];
-    for (var i = 0; i < LANES; i++) lanes.push(one());
+    speedOrigins().forEach(function(origin){
+      var state = { fails: 0 };
+      for (var i = 0; i < LANES; i++) lanes.push(one(origin, state));
+    });
     return Promise.all(lanes).then(function(){
       clearTimeout(timer);
       if (!got) return null;

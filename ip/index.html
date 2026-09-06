@@ -618,7 +618,7 @@ h1 em{font-style:normal;color:var(--amber)}
     return Math.round(Math.max(262144, Math.min(3670016, mbps * 1e6 / 8 * 4)));
   }
 
-  function uploadOnce(bytes, lat){
+  function uploadOnce(bytes, lat, capMs){
     return new Promise(function(resolve){
       var data;
       try{
@@ -635,7 +635,7 @@ h1 em{font-style:normal;color:var(--amber)}
         /* An aborted pass yields no server acknowledgment, so there is no
            honest number to report for it. */
         resolve(null);
-      }, 10000);
+      }, capMs || 12000);
       xhr.onloadend = function(){
         if (settled) return; settled = true;
         clearTimeout(timer);
@@ -655,9 +655,14 @@ h1 em{font-style:normal;color:var(--amber)}
     /* A small probe first, to learn roughly what the line can do, then a main
        pass sized to it. A fixed payload is either too small to measure a fast
        line or takes half a minute on a slow one. */
-    return uploadOnce(262144, lat).then(function(probe){
+    /* The probe is 128 KB: at the slowest uplink seen in testing, around
+       0.2 Mbps, a 256 KB probe needs eleven seconds of wire time and timed
+       out inside its own cap, so upload reported nothing at all on exactly
+       the connections where its cost matters most. 128 KB fits in about
+       five seconds even there. */
+    return uploadOnce(131072, lat, 12000).then(function(probe){
       if (probe == null) return null;
-      return uploadOnce(uploadTarget(probe), lat).then(function(main){
+      return uploadOnce(uploadTarget(probe), lat, 12000).then(function(main){
         return main != null ? main : probe;
       });
     });
@@ -940,7 +945,12 @@ h1 em{font-style:normal;color:var(--amber)}
     $("ulNow").innerHTML = fmt(now.up)+'<small>Mbps</small>';
     $("ltNow").innerHTML = (now.latency==null?"—":now.latency.toFixed(0))+'<small>ms</small>';
     $("dlDelta").textContent=dd.txt; $("dlDelta").className="d "+dd.cls;
-    $("ulDelta").textContent=du.txt; $("ulDelta").className="d "+du.cls;
+    if (now.up == null){
+      $("ulDelta").textContent = "did not finish in time";
+      $("ulDelta").className = "d flat";
+    } else {
+      $("ulDelta").textContent=du.txt; $("ulDelta").className="d "+du.cls;
+    }
     $("ltDelta").textContent=dl.txt; $("ltDelta").className="d "+dl.cls;
 
     /* The headline has to answer for every number shown beneath it. Judging on

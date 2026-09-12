@@ -389,6 +389,33 @@ h1 em{font-style:normal;color:var(--amber)}
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
+  /* The same place can carry two names: browsers report Asia/Calcutta while
+     address databases say Asia/Kolkata. Treating those as a mismatch flagged
+     users who had no VPN at all as "giving themselves away". */
+  function tzNorm(z){ return String(z || "").replace("Asia/Calcutta", "Asia/Kolkata"); }
+  function tzEq(a, b){ return !!(a && b && tzNorm(a) === tzNorm(b)); }
+
+  var HOSTED_RE = /\b(hosting|datacent|data ?cent|cloud|vpn|proxy|colo|scaleway|ovh|digitalocean|linode|hetzner|leaseweb|vultr|m247|choopa|nordvpn|express ?vpn|mullvad|surfshark|private internet|cyberghost|proton)\b/i;
+  function looksHosted(org){ return !!(org && HOSTED_RE.test(org)); }
+
+  /* Users test tools by running them backwards, and a reversed run used to
+     earn a passing grade for switching the VPN OFF: the baseline was the
+     tunnel, so removing it changed everything and scored as hiding. When the
+     baseline itself carries tunnel fingerprints that the current run lacks,
+     the comparison is pointing the wrong way and must say so instead of
+     grading it. */
+  function looksReversed(base, now, pct){
+    if (pct < 30) return null;
+    var why = [];
+    if (looksHosted(base.org) && now.org && !looksHosted(now.org)){
+      why.push("the baseline sat on a hosting network (" + base.org + ") while this check is on a consumer provider (" + now.org + ")");
+    }
+    if (base.apiTz && base.tz && !tzEq(base.apiTz, base.tz) && tzEq(now.apiTz, now.tz)){
+      why.push("the baseline's clock disagreed with its apparent location, while this check's agrees");
+    }
+    return why.length ? why : null;
+  }
+
   function grade(pct){
     return pct >= 100 ? "A+" : pct >= 90 ? "A" : pct >= 70 ? "B"
          : pct >= 50 ? "C" : pct >= 25 ? "D" : "F";
@@ -820,7 +847,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
     /* Shown but not scored: hiding this is not the VPN's job. */
     var extras = [];
-    if (now.apiTz && now.tz && now.apiTz !== now.tz){
+    if (now.apiTz && now.tz && !tzEq(now.apiTz, now.tz)){
       extras.push({ name:"Your timezone", was:null, is:now.tz, state:"tell",
         why:"Your clock still says " + now.tz + " while your address says " + now.apiTz +
             ". Sites compare the two, so they can tell you are on a VPN even though they cannot see through it." });
@@ -862,14 +889,19 @@ h1 em{font-style:normal;color:var(--amber)}
 
     var working = cmp.pct >= 80 && !cmp.exposed.length;
     var none = cmp.pct === 0;
-    var tone = working ? "pass" : (none ? "danger" : "warn");
+    var revWhy = looksReversed(base, now, cmp.pct);
+    var reversed = !!revWhy;
+    var tone = reversed ? "warn" : working ? "pass" : (none ? "danger" : "warn");
 
     $("vDot").style.background = "var(--" + tone + ")";
-    $("vText").textContent = !cmp.measured ? "Not enough information"
+    $("vText").textContent = reversed ? "This comparison looks reversed"
+      : !cmp.measured ? "Not enough information"
       : working ? "Your VPN is working"
       : none ? "Your VPN does not appear to be on"
       : "Working, but not completely";
-    $("vSub").textContent = !cmp.measured
+    $("vSub").textContent = reversed
+      ? "The baseline looks like it was taken with the VPN already on, and this check without it, so hidden and visible below point the wrong way."
+      : !cmp.measured
       ? "The address lookup did not complete, so there was nothing to compare."
       : working ? "Everything this tool can check is now hidden."
       : none ? "Nothing about your connection changed between the two checks."
@@ -884,7 +916,10 @@ h1 em{font-style:normal;color:var(--amber)}
     cmp.items.forEach(function(i){ st[i.name] = i.state; });
 
     var risk = "";
-    if (none && cmp.measured){
+    if (reversed){
+      risk = '<div class="risk"><p>This looks like a reversed comparison: ' + esc(revWhy.join("; ")) +
+        '. The hidden and still-visible labels above point the wrong way, and any speed change mostly reflects the VPN switching off. Start over, take the baseline with the VPN fully off, then run the check with it on.</p></div>';
+    } else if (none && cmp.measured){
       risk = '<div class="risk"><p>Nothing changed between the two checks. Either the VPN did not connect, or it is not covering this browser. Right now you have the same exposure you would have with it switched off.</p></div>';
     } else if (st["Your IP address"] === "hidden" &&
                st["Your network provider"] === "exposed" &&
@@ -951,7 +986,10 @@ h1 em{font-style:normal;color:var(--amber)}
                   loss(now.up, base.up, true),
                   loss(now.latency, base.latency, false) ].filter(function(v){ return v != null; });
 
-    if (!costs.length){
+    if (reversed){
+      $("spText").textContent = "Measured in the wrong direction";
+      $("spSub").textContent = "These numbers compare a VPN-on baseline against a VPN-off check, so faster here mostly means the VPN came off. Start over with the VPN off for the baseline.";
+    } else if (!costs.length){
       $("spText").textContent = "Speed could not be measured";
       $("spSub").textContent = "The transfers did not finish. Try again on a steadier connection.";
     } else if (none && cmp.measured){
@@ -1024,9 +1062,14 @@ h1 em{font-style:normal;color:var(--amber)}
       dUp: loss(now.up, base.up, true),
       dLat: loss(now.latency, base.latency, false)
     };
-    saveHist(lastReport);
-    renderHist();
-    $("shareRow").classList.remove("hidden");
+    if (reversed){
+      lastReport = null;
+      $("shareRow").classList.add("hidden");
+    } else {
+      saveHist(lastReport);
+      renderHist();
+      $("shareRow").classList.remove("hidden");
+    }
 
   }
 

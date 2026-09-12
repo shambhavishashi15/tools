@@ -1,0 +1,9 @@
+# Sensible defaults for every page
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+# The vendored measurement engine never changes without a filename change
+/vendor/*
+  Cache-Control: public, max-age=86400

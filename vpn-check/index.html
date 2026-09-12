@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Is my VPN working? Check what it hides and what it costs</title>
-<meta name="description" content="Check whether your VPN is actually hiding your identity, how much of your data it conceals, and how much download and upload speed it costs you. Free, no ads, nothing logged.">
+<title>VPN checker &mdash; is your VPN actually working? Free online test</title>
+<meta name="description" content="Free online VPN checker. See whether your VPN is really hiding your IP address, what still leaks through WebRTC and IPv6, and what it costs you in speed. No login, no ads, nothing logged.">
 <!-- Swap the vercel.app URLs below for your domain the day you attach it -->
 <link rel="canonical" href="https://tools-nine-orpin.vercel.app/vpn-check/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Is my VPN working? Check what it hides and what it costs">
-<meta property="og:description" content="Measure your connection before and after connecting your VPN: what it really hides, what still leaks, and what it costs you in speed. Free, no ads, nothing logged.">
+<meta property="og:title" content="VPN checker &mdash; is your VPN actually working?">
+<meta property="og:description" content="A free online VPN checker that measures your connection before and after connecting: what your VPN really hides, what leaks past it, and what it costs in speed.">
 <meta property="og:url" content="https://tools-nine-orpin.vercel.app/vpn-check/">
 <meta property="og:image" content="https://tools-nine-orpin.vercel.app/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -73,6 +73,16 @@
       "@type": "Question",
       "name": "How do I check if my VPN is working on my phone?",
       "acceptedAnswer": { "@type": "Answer", "text": "Open this page in your phone's browser and run the same two steps: baseline with the VPN off, then check with it on. Results are specific to each device, because a VPN app on your laptop does nothing for your phone, and a browser extension covers only that browser on that machine." }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I use this to check my VPN for torrenting?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Partly. This checker measures your browser, while a torrent client is a separate application with its own connection, so a clean result here does not prove torrent traffic is going through the tunnel. Split tunneling, clients bound to a specific adapter, and browser-extension VPNs all cause the two to diverge. It does tell you whether the VPN is working on this device at all, whether IPv6 is escaping, and what the tunnel costs in speed. Verifying the client itself needs a torrent-specific IP check, where your client downloads a tracker file that reports the address it connected from." }
+    },
+    {
+      "@type": "Question",
+      "name": "Does this VPN checker work with NordVPN and other providers?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, with any of them. It never asks which VPN you use, because it compares what websites can see before and after you connect rather than inspecting the software. That works identically for NordVPN, Proton, Surfshark, Mullvad, ExpressVPN, a corporate VPN, or a browser extension." }
     },
     {
       "@type": "Question",
@@ -287,7 +297,7 @@ h1 em{font-style:normal;color:var(--amber)}
 
 <div class="shell">
   <h1>Is your VPN <em>actually</em> working?</h1>
-  <p class="lede">Other tools show you one reading and leave you to guess. This one measures your connection twice, before and after, so it can tell you what your VPN really hides and what it costs you in speed.</p>
+  <p class="lede">A free online VPN checker that measures your connection twice, before and after you connect, instead of showing one reading and leaving you to guess. It tells you what your VPN really hides, what still leaks past it, and what it costs you in speed.</p>
 
   <div class="stage" id="stageBox">
     <p class="step" id="stepLabel">Step 1 of 2</p>
@@ -366,8 +376,16 @@ h1 em{font-style:normal;color:var(--amber)}
   </div>
 
   <section class="prose">
+    <h2>What this VPN checker does</h2>
+    <p>Most VPN checker tools load a page, read your IP address, and show it back to you. That tells you what your address is now, but not whether your VPN changed anything &mdash; and changing it is the only job a VPN has. This one works differently. You run it once with the VPN off, once with it on, and it compares the two: your IP address, your network provider, your apparent location, the address your browser hands out through WebRTC, and your IPv6 address. Whatever stayed the same is something your VPN is not protecting, and the tool names it.</p>
+    <p>It works with any provider &mdash; NordVPN, Proton, Surfshark, Mullvad, ExpressVPN, your employer's corporate VPN, or a browser extension &mdash; because it never asks which one you use. It only compares what websites can see before and after &mdash; the one measurement that holds regardless of who made the software.</p>
+    <p>It is free, runs entirely in your browser with no login and no account, and stores nothing about you. The leak checks never leave your device. Speed is measured by Cloudflare's open-source engine against their nearest server, so the figures line up with the speed tests you already use.</p>
+
     <h2>How do I know if my VPN is actually working?</h2>
     <p>A single reading cannot tell you, because it has nothing to compare against. The reliable way is a before-and-after check: measure what websites can see with the VPN off, connect it, measure again, and compare. Anything that stayed the same is something the VPN is not protecting. That is what this page does, for your IP address, your network provider, your apparent location, WebRTC and IPv6 &mdash; and it grades the result by how much of that identifying detail actually changed.</p>
+
+    <h2>What does a VPN checker actually test?</h2>
+    <p>Your IP address is the headline, and the first thing this checker compares: with a working VPN the address sites see belongs to the VPN server, not to your provider. But an IP check alone is not enough, which is where most tools stop. Your network provider's name and your apparent city are read from the same address and should move with it. Your browser can hand out a second address through WebRTC that never passes through the tunnel at all. Your IPv6 address frequently escapes even when IPv4 is routed correctly, because many VPN clients tunnel one and ignore the other. And your device's clock still reports your real timezone, which any site can compare against your apparent location. This tool checks all five and grades them together.</p>
 
     <h2>What is a WebRTC leak?</h2>
     <p>Browsers ship a built-in calling system, WebRTC, that discovers your network address so calls can connect directly. Any page can quietly ask it for that address, with no permission prompt, and the answer can come from outside your VPN tunnel. That is a WebRTC leak: your real address on display while the VPN icon says connected. Browser-extension VPNs are especially prone to it, because they route web traffic but usually not WebRTC. This check compares the address WebRTC hands out against the address the site actually sees, which is the test that matters.</p>
@@ -386,6 +404,9 @@ h1 em{font-style:normal;color:var(--amber)}
 
     <h2>How do I check my VPN on my phone?</h2>
     <p>Open this page in the phone's browser and run the same two steps there. Coverage is per device: a VPN app on your laptop does nothing for your phone, and a browser extension protects only that one browser on that one machine, which is exactly the kind of gap a per-device check makes visible.</p>
+
+    <h2>Can I use this to check my VPN for torrenting?</h2>
+    <p>Partly, and it is worth knowing exactly where the limit is. This checker measures your browser. A torrent client is a separate application with its own connection, so a clean result here does not prove your torrent traffic is going through the tunnel. They genuinely diverge in common setups: split tunneling routes chosen apps around the VPN, some clients bind to a specific network adapter, and a browser extension VPN covers only that browser and nothing else on the machine. It does tell a torrent user whether the VPN works on this device at all, whether IPv6 is escaping, and what the tunnel costs in speed. To verify the client itself you need a torrent-specific IP check, which works by having your client download a tracker file that reports the address it connected from.</p>
 
     <h2>Can a VPN hide everything?</h2>
     <p>No, and any tool that implies otherwise is selling something. Your screen size, graphics hardware, fonts and browser version stay readable whatever you do, and together they can identify a browser with no address at all. A VPN changes where you appear to connect from. It does not change what your browser is.</p>

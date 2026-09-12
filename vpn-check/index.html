@@ -593,21 +593,43 @@ h1 em{font-style:normal;color:var(--amber)}
     return cfEngine;
   }
 
+  /* Middle 80 per cent of the per-transfer speeds, so one freak sample at
+     either end cannot define the range. */
+  function sampleSpread(points){
+    if (!points || points.length < 4) return null;
+    var arr = points.slice().sort(function(a,b){ return a - b; });
+    var lo = arr[Math.floor(arr.length * 0.1)] / 1e6;
+    var hi = arr[Math.min(arr.length - 1, Math.ceil(arr.length * 0.9) - 1)] / 1e6;
+    return { lo: lo, hi: hi };
+  }
+
   function measureSpeed(){
     return loadEngine().then(function(SpeedTest){
       return new Promise(function(resolve){
         var settled = false;
-        function done(summary){
+        function done(resultsObj){
           if (settled) return; settled = true;
           clearTimeout(guard);
-          resolve(summary || null);
+          if (!resultsObj) return resolve(null);
+          var summary = null;
+          try{ summary = resultsObj.getSummary(); }catch(e){ return resolve(null); }
+          /* The individual transfer speeds behind the headline number. When
+             they scatter widely within one test, the single figure is a
+             summary of a moving target, and the page should say so instead
+             of letting the number look more certain than it is. */
+          try{
+            summary.__downPoints = resultsObj.getDownloadBandwidthPoints()
+              .map(function(pt){ return pt.bps; })
+              .filter(function(v){ return typeof v === "number" && isFinite(v) && v > 0; });
+          }catch(e){ summary.__downPoints = []; }
+          resolve(summary);
         }
         var engine;
         /* Hard ceiling: the engine self-limits once requests get slow, but a
            stalled network should not leave the page spinning forever. */
         var guard = setTimeout(function(){
           try{ if (engine) engine.pause(); }catch(e){}
-          done(engine ? engine.results.getSummary() : null);
+          done(engine ? engine.results : null);
         }, 35000);
 
         try{
@@ -626,8 +648,8 @@ h1 em{font-style:normal;color:var(--amber)}
               { type: "upload",   bytes: 1e7, count: 2 }
             ]
           });
-          engine.onFinish = function(results){ done(results.getSummary()); };
-          engine.onError = function(){ done(engine.results.getSummary()); };
+          engine.onFinish = function(results){ done(results); };
+          engine.onError = function(){ done(engine.results); };
           engine.play();
         }catch(e){ done(null); }
       });
@@ -655,6 +677,7 @@ h1 em{font-style:normal;color:var(--amber)}
           rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
           rtc6: rtc.pub.filter(function(a){ return a.indexOf(":")>-1; }),
           down: sp ? bps(sp.download) : null,
+          downSpread: sp ? sampleSpread(sp.__downPoints) : null,
           up:   sp ? bps(sp.upload)   : null,
           latency: (sp && typeof sp.latency === "number" && isFinite(sp.latency)) ? sp.latency : null
         };
@@ -938,9 +961,15 @@ h1 em{font-style:normal;color:var(--amber)}
          exactly that: identical conditions, and the card blamed a VPN for a
          33 per cent swing the connection produced on its own. */
       $("spText").textContent = "Your line moved between the two runs";
-      $("spSub").textContent = "No VPN was detected, so the differences below are your connection varying between measurements, not a VPN cost. First run: " +
+      var lineSub = "No VPN was detected, so the differences below are your connection varying between measurements, not a VPN cost. First run: " +
         fmt(base.down) + " Mbps down, " + fmt(base.up) + " Mbps up, " +
         (base.latency==null ? "—" : base.latency.toFixed(0)) + " ms.";
+      if (now.downSpread && now.down &&
+          (now.downSpread.hi - now.downSpread.lo) > now.down * 0.6){
+        lineSub += " Within this one test, download swung between " +
+          fmt(now.downSpread.lo) + " and " + fmt(now.downSpread.hi) + " Mbps.";
+      }
+      $("spSub").textContent = lineSub;
     } else {
       var worst = Math.max.apply(null, costs);
       var names = ["download","upload","latency"];
@@ -964,6 +993,16 @@ h1 em{font-style:normal;color:var(--amber)}
         var ageTxt = ageMin < 120 ? ("about " + ageMin + " minutes")
                                   : ("about " + Math.round(ageMin/60) + " hours");
         sub += " That baseline is " + ageTxt + " old, and line speed changes across the day, so retake it before trusting the speed change.";
+      }
+      /* When the transfers inside this single test scattered widely, the
+         headline is an average of a moving target: say so, with the actual
+         range, so repeat-run differences read as the connection rather than
+         as the tool contradicting itself. */
+      if (now.downSpread && now.down &&
+          (now.downSpread.hi - now.downSpread.lo) > now.down * 0.6){
+        sub += " During this one test, download itself swung between " +
+          fmt(now.downSpread.lo) + " and " + fmt(now.downSpread.hi) +
+          " Mbps, so repeated runs will differ — that swing is the connection, not the measurement.";
       }
       $("spSub").textContent = sub;
     }

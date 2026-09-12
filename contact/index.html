@@ -2,6 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<script>
+(function(){try{var t=localStorage.getItem("tools.theme");
+document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contact — Tools</title>
 <meta name="description" content="Get in touch about a bug, a result that looks wrong, a suggestion, or anything else about these free web tools.">
@@ -20,6 +24,11 @@
 <style>
 :root{--bg:#0A0E14;--surface:#10151D;--ink:#E8EDF4;--slate:#95A1B2;--faint:#5D6977;
 --rule:#1E2733;--rule-firm:#2D3948;--amber:#FFB224}
+[data-theme="light"]{--bg:#F2F1EC;--surface:#FFFFFF;--ink:#161A20;--slate:#5A636E;
+--faint:#8B939E;--rule:#E1DFD8;--rule-firm:#C9C6BE;--amber:#B87708}
+.tbtn{border:1px solid var(--rule-firm);background:transparent;color:var(--slate);
+border-radius:6px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.tbtn:hover{border-color:var(--ink);color:var(--ink)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Space Grotesk",system-ui,sans-serif;
 font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
@@ -32,7 +41,7 @@ repeating-linear-gradient(90deg,transparent 0 47px,var(--rule) 47px 48px);backgr
 .brand{display:flex;align-items:center;gap:10px;font-family:"IBM Plex Mono",monospace;font-size:14px;
 letter-spacing:.08em;font-weight:500;text-decoration:none;color:inherit}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex:none}
-.mast nav{display:flex;gap:18px}
+.mast nav{display:flex;gap:14px;align-items:center}
 .mast nav a{font-size:14px;color:var(--slate);text-decoration:none}
 .mast nav a:hover{color:var(--ink)}
 h1{font-size:clamp(25px,5vw,34px);font-weight:600;letter-spacing:-.025em;line-height:1.15;margin:46px 0 10px}
@@ -65,7 +74,7 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 <header class="mast">
   <div class="shell">
     <a class="brand" href="/"><span class="dot" aria-hidden="true"></span>TOOLS</a>
-    <nav><a href="/vpn-check/">VPN check</a><a href="/about/">About</a><a href="/contact/">Contact</a></nav>
+    <nav><a href="/vpn-check/">VPN check</a><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
 <div class="shell">
@@ -104,5 +113,20 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
   <p>Free tools that measure honestly and keep nothing. No ads, no accounts, no trackers.</p>
 </footer>
 </div>
+<script>
+(function(){
+  var root=document.documentElement, btn=document.getElementById("themeBtn");
+  function set(t){
+    root.setAttribute("data-theme",t);
+    if(btn) btn.textContent = t==="dark" ? "Light" : "Dark";
+    try{ localStorage.setItem("tools.theme", t); }catch(e){}
+  }
+  var cur = root.getAttribute("data-theme")==="light" ? "light" : "dark";
+  if(btn) btn.textContent = cur==="dark" ? "Light" : "Dark";
+  if(btn) btn.addEventListener("click", function(){
+    set(root.getAttribute("data-theme")==="dark" ? "light" : "dark");
+  });
+})();
+</script>
 </body>
 </html>

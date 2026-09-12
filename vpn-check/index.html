@@ -2,6 +2,10 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<script>
+(function(){try{var t=localStorage.getItem("tools.theme");
+document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VPN checker &mdash; is your VPN actually working? Free online test</title>
 <meta name="description" content="Free online VPN checker. See whether your VPN is really hiding your IP address, what still leaks through WebRTC and IPv6, and what it costs you in speed. No login, no ads, nothing logged.">
@@ -563,10 +567,19 @@ h1 em{font-style:normal;color:var(--amber)}
     body.innerHTML = html;
   }
 
+  /* Dark by default, and the choice is remembered for every page on the site.
+     A script in the document head applies the stored value before first paint,
+     so switching pages never flashes the wrong theme. */
   var root=document.documentElement, tb=$("themeBtn");
-  function theme(t){ root.setAttribute("data-theme",t); tb.textContent = t==="dark"?"Light":"Dark"; }
-  theme(window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-  tb.addEventListener("click",function(){ theme(root.getAttribute("data-theme")==="dark"?"light":"dark"); });
+  function theme(t){
+    root.setAttribute("data-theme",t);
+    tb.textContent = t==="dark" ? "Light" : "Dark";
+    try{ localStorage.setItem("tools.theme", t); }catch(e){}
+  }
+  tb.textContent = root.getAttribute("data-theme")==="light" ? "Dark" : "Light";
+  tb.addEventListener("click",function(){
+    theme(root.getAttribute("data-theme")==="dark" ? "light" : "dark");
+  });
 
   /* ---------- measurement ---------- */
   /* Candidate lines have a fixed grammar: "candidate:<f> <comp> <proto>

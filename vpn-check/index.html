@@ -347,8 +347,8 @@ h1 em{font-style:normal;color:var(--amber)}
   </section>
 
   <div class="foot">
-    <p>Everything is measured in your browser against this site alone. Your address is never written to a log or a database, and there are no ads or third-party trackers here.</p>
-    <p>Speed figures cover the route between you and this one server. Download opens parallel connections to a file served from the network edge nearest you, keeps them filled for up to ten seconds and sums them, the way dedicated speed tests measure, so its number is comparable to theirs. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>The leak checks run entirely in your browser against this site alone. Your address is never written to a log or a database here, and there are no ads or third-party trackers on this page. The speed test necessarily talks to Cloudflare's nearest server, since measuring a connection needs a server near you; it is configured not to submit your results to their statistics.</p>
+    <p>Speed figures cover the route between you and this one server. Speed is measured by Cloudflare's open-source engine, the same one behind speed.cloudflare.com, against whichever of their servers is nearest you — which is why these figures line up with other speed tests. Those requests reach Cloudflare; results are not submitted to their aggregated statistics. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
   </div>
 </div>
@@ -385,7 +385,7 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 6;
+  var METHOD = 7;
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
@@ -565,259 +565,97 @@ h1 em{font-style:normal;color:var(--amber)}
       .catch(function(){ return null; });
   }
 
-  /* Latency is measured against this page's own static path, which the host
-     serves from an edge node near the visitor. Pinging the serverless
-     function instead would add its invocation overhead plus the distance to
-     its home region, inflating every reading; an earlier build did exactly
-     that and reported half a second of "latency" that was mostly geography. */
-  function latency(){
-    var runs=[];
-    function once(){
-      var t=performance.now();
-      return fetch(location.pathname + "?cb="+Math.random(),{method:"HEAD",cache:"no-store"})
-        .then(function(){ runs.push(performance.now()-t); })
-        .catch(function(){});
+  /* Speed is measured by Cloudflare's engine, the same one behind
+     speed.cloudflare.com, vendored into this site rather than loaded from a
+     third party at runtime.
+
+     The reason is infrastructure, not code. Measuring against our own
+     deployment meant one server in one region: a visitor in Asia behind a
+     European VPN was fetching across the Atlantic on the single TCP
+     connection a browser grants per origin, and read 3 Mbps where dedicated
+     testers, using servers beside the VPN exit and many connections at once,
+     read 25. No amount of client-side sampling closes a gap that is made of
+     distance and connection count. Cloudflare's network is anycast, so the
+     endpoint is always near the visitor, which is what makes the number
+     comparable to what other speed tests report.
+
+     logAimApiUrl is set to null so results are not submitted to Cloudflare's
+     aggregation. The measurement requests themselves necessarily reach their
+     edge, which the page states plainly rather than glossing over. */
+  var cfEngine = null;
+  function loadEngine(){
+    if (!cfEngine){
+      cfEngine = import("/vendor/speedtest.js").then(function(m){ return m.default; })
+        .catch(function(e){ cfEngine = null; throw e; });
     }
-    return once().then(once).then(once).then(function(){
-      if(!runs.length) return null;
-      runs.sort(function(a,b){return a-b;});
-      return runs[Math.floor(runs.length/2)];   /* median, so one stall does not define the result */
-    });
+    return cfEngine;
   }
 
-  /* Serverless functions go cold. A first request can spend several hundred
-     milliseconds starting the function up, which would be counted as slow
-     network and would bias whichever run happened to be first. This request
-     is deliberately untimed and exists only to wake it. */
-  function warmup(){
-    return fetch("/api/speed?bytes=262144&cb="+Math.random(),{cache:"no-store"})
-      .then(function(r){ return r.arrayBuffer(); })
-      .catch(function(){});
-  }
-
-  /* A single total-time window folds connection ramp-up into the number and
-     understates real throughput, worse on slow or distant links. Instead the
-     transfer is sampled as it streams, the first 250ms-or-20% after the first
-     byte is discarded as ramp, and the rate comes from the steady portion.
-     Falls back to total-minus-latency when too little data arrived to judge. */
-  function steadyRate(samples, totalMs, totalBytes, latMs){
-    if (samples.length >= 3){
-      var first = samples[0], last = samples[samples.length-1];
-      /* On a long route TCP spends whole seconds warming up, and that
-         warm-up is exactly what must not be averaged into the result. */
-      var rampEnd = first.t + Math.max(1500, (last.t - first.t) * 0.3);
-      var s0 = null;
-      for (var i = 0; i < samples.length; i++){
-        if (samples[i].t >= rampEnd){ s0 = samples[i]; break; }
-      }
-      if (s0 && (last.t - s0.t) > 700 && (last.b - s0.b) > 60000){
-        return ((last.b - s0.b) * 8) / ((last.t - s0.t) / 1000) / 1e6;
-      }
-    }
-    var transfer = totalMs - (latMs || 0);
-    if (transfer <= 0 || !totalBytes) return null;
-    return (totalBytes * 8) / (transfer / 1000) / 1e6;
-  }
-
-  /* Two things decide download throughput here, and the second one dominated
-     for a long time.
-
-     First, connections: a browser grants ONE TCP connection per origin over
-     HTTP/2, so real parallelism needs real extra origins. Each entry below
-     must serve the same files; entries that do not answer are dropped after
-     two failures and cost nothing.
-
-     Second, and far more important, distance. Serverless functions run in one
-     region, so a visitor in Asia behind a European VPN was fetching across the
-     Atlantic and back: measured against a tester whose server sat beside the
-     VPN exit, this read 3.5 Mbps where the line was carrying 25. Static files
-     are served from CDN edge nodes worldwide, so the payload below arrives
-     from a node near the visitor. The function endpoint stays as a fallback
-     for the case where the file is missing. */
-  var SPEED_ORIGINS = [
-    "https://tools-git-main-personaltools1.vercel.app"
-  ];
-  var PAYLOAD_PATH = "/speed-payload.bin";
-  var payloadOk = true;
-
-  function speedOrigins(){
-    var out = [location.origin];
-    SPEED_ORIGINS.forEach(function(o){
-      o = String(o).replace(/\/+$/, "");
-      if (o && o !== location.origin && out.indexOf(o) < 0) out.push(o);
-    });
-    return out;
-  }
-
-  /* No cache-busting query string: it would make every request a cache miss
-     at the edge and send the fetch back to the origin region, undoing the
-     whole point. "no-store" already forces a real network transfer while
-     still letting the CDN answer from its nearest node. */
-  function downloadUrl(origin){
-    return payloadOk
-      ? origin + PAYLOAD_PATH
-      : origin + "/api/speed?bytes=" + (3 * 1024 * 1024) + "&cb=" + Math.random();
-  }
-
-  function download(lat){
-    var WINDOW = 10000, MAX_TOTAL = 32 * 1024 * 1024, LANES = 2;
-    var t0 = performance.now(), samples = [], got = 0, stopped = false, ctrls = [];
-    function elapsed(){ return performance.now() - t0; }
-    function stopAll(){
-      stopped = true;
-      ctrls.forEach(function(c){ try{ c.abort(); }catch(e){} });
-    }
-    var timer = setTimeout(stopAll, WINDOW);
-
-    function one(origin, state){
-      if (stopped || elapsed() >= WINDOW || got >= MAX_TOTAL || state.fails >= 2){
-        return Promise.resolve();
-      }
-      var ctrl = ("AbortController" in window) ? new AbortController() : null;
-      if (ctrl) ctrls.push(ctrl);
-      return fetch(downloadUrl(origin),
-          ctrl ? { cache:"no-store", signal: ctrl.signal } : { cache:"no-store" })
-        .then(function(r){
-          if (!r.ok){
-            /* A missing payload file is not a network failure: fall back to
-               the function for the rest of this run rather than reporting a
-               dead connection. */
-            if (r.status === 404 && payloadOk){ payloadOk = false; return; }
-            throw new Error("status " + r.status);
-          }
-          state.fails = 0;
-          if (!r.body || !r.body.getReader){
-            return r.arrayBuffer().then(function(buf){
-              got += buf.byteLength;
-              samples.push({ t: elapsed(), b: got });
-            });
-          }
-          var reader = r.body.getReader();
-          function pump(){
-            return reader.read().then(function(res){
-              if (res.done) return;
-              got += res.value.length;
-              samples.push({ t: elapsed(), b: got });
-              if (got >= MAX_TOTAL) stopAll();
-              return pump();
-            });
-          }
-          return pump();
-        })
-        .catch(function(){ if (!stopped) state.fails = (state.fails || 0) + 1; })
-        .then(function(){
-          if (!stopped && elapsed() < WINDOW && got < MAX_TOTAL) return one(origin, state);
-        });
-    }
-
-    var lanes = [];
-    speedOrigins().forEach(function(origin){
-      var state = { fails: 0 };
-      for (var i = 0; i < LANES; i++) lanes.push(one(origin, state));
-    });
-    return Promise.all(lanes).then(function(){
-      clearTimeout(timer);
-      if (!got) return null;
-      return steadyRate(samples, elapsed(), got, lat);
-    });
-  }
-
-  /* Upload is timed end to end: from send to the server's acknowledgment.
-     Progress events cannot be trusted for this, because they count bytes
-     handed to the operating system's send buffer rather than bytes delivered:
-     measured against three independent testers, the progress-based build
-     reported 8 Mbps on a line whose upload never exceeded 4 anywhere else.
-     End-to-end timing is immune to buffering. It includes one response trip,
-     which the measured latency subtracts, so it reads slightly conservative
-     rather than inflated. */
-  function uploadTarget(mbps){
-    /* Size the main pass to roughly four seconds of sending, clamped between
-       256 KB and 3.5 MB. The platform rejects request bodies over 4.5 MB. */
-    return Math.round(Math.max(262144, Math.min(3670016, mbps * 1e6 / 8 * 4)));
-  }
-
-  function uploadOnce(bytes, lat, capMs){
-    return new Promise(function(resolve){
-      var data;
-      try{
-        data = new Uint8Array(bytes);
-        for (var at = 0; at < bytes; at += 65536){
-          crypto.getRandomValues(data.subarray(at, Math.min(at + 65536, bytes)));
+  function measureSpeed(){
+    return loadEngine().then(function(SpeedTest){
+      return new Promise(function(resolve){
+        var settled = false;
+        function done(summary){
+          if (settled) return; settled = true;
+          clearTimeout(guard);
+          resolve(summary || null);
         }
-      }catch(e){ return resolve(null); }
-      var xhr = new XMLHttpRequest();
-      var t0 = performance.now(), settled = false;
-      var timer = setTimeout(function(){
-        if (settled) return; settled = true;
-        try{ xhr.abort(); }catch(e){}
-        /* An aborted pass yields no server acknowledgment, so there is no
-           honest number to report for it. */
-        resolve(null);
-      }, capMs || 12000);
-      xhr.onloadend = function(){
-        if (settled) return; settled = true;
-        clearTimeout(timer);
-        if (xhr.status < 200 || xhr.status >= 300) return resolve(null);
-        var ms = (performance.now() - t0) - (lat || 0);
-        if (ms <= 0) return resolve(null);
-        resolve((bytes * 8) / (ms / 1000) / 1e6);
-      };
-      try{
-        xhr.open("POST", "/api/speed?cb=" + Math.random());
-        xhr.send(new Blob([data]));
-      }catch(e){ clearTimeout(timer); if(!settled){ settled=true; resolve(null); } }
-    });
-  }
+        var engine;
+        /* Hard ceiling: the engine self-limits once requests get slow, but a
+           stalled network should not leave the page spinning forever. */
+        var guard = setTimeout(function(){
+          try{ if (engine) engine.pause(); }catch(e){}
+          done(engine ? engine.results.getSummary() : null);
+        }, 35000);
 
-  function upload(lat){
-    /* A small probe first, to learn roughly what the line can do, then a main
-       pass sized to it. A fixed payload is either too small to measure a fast
-       line or takes half a minute on a slow one. */
-    /* The probe is 128 KB: at the slowest uplink seen in testing, around
-       0.2 Mbps, a 256 KB probe needs eleven seconds of wire time and timed
-       out inside its own cap, so upload reported nothing at all on exactly
-       the connections where its cost matters most. 128 KB fits in about
-       five seconds even there. */
-    return uploadOnce(131072, lat, 12000).then(function(probe){
-      if (probe == null) return null;
-      return uploadOnce(uploadTarget(probe), lat, 12000).then(function(main){
-        return main != null ? main : probe;
+        try{
+          engine = new SpeedTest({
+            autoStart: false,
+            logAimApiUrl: null,        /* do not submit results for aggregation */
+            logMeasurementApiUrl: null,
+            measurements: [
+              { type: "latency",  numPackets: 10 },
+              { type: "download", bytes: 1e5, count: 6 },
+              { type: "download", bytes: 1e6, count: 5 },
+              { type: "upload",   bytes: 1e5, count: 5 },
+              { type: "download", bytes: 1e7, count: 3 },
+              { type: "upload",   bytes: 1e6, count: 4 },
+              { type: "download", bytes: 2.5e7, count: 2 },
+              { type: "upload",   bytes: 1e7, count: 2 }
+            ]
+          });
+          engine.onFinish = function(results){ done(results.getSummary()); };
+          engine.onError = function(){ done(engine.results.getSummary()); };
+          engine.play();
+        }catch(e){ done(null); }
       });
-    });
+    }).catch(function(){ return null; });
   }
 
   function scan(phase){
     var say = function(m){ if (phase){ try{ phase(m); }catch(e){} } };
-    say("Warming up the line\u2026");
-    return warmup().then(function(){
-      say("Reading what sites can see about you\u2026");
-      return Promise.all([identity(), webrtc(), latency()]).then(function(r){
-        var lat = r[2];
-        /* Transfers run last and one at a time so they do not compete with the
-           lookups, or with each other, for the same bandwidth. */
-        say("Measuring download speed\u2026");
-        return download(lat).then(function(dl){
-          say("Measuring upload speed\u2026");
-          return upload(lat).then(function(ul){
-            var id = r[0] || {}, rtc = r[1];
-            return {
-              v: METHOD,
-              at: Date.now(),
-              ip: id.ip || null,
-              city: id.city || null,
-              country: id.countryName || id.country || null,
-              org: id.org || null,
-              apiTz: id.timezone || null,
-              lat: (typeof id.latitude === "number") ? id.latitude : null,
-              lon: (typeof id.longitude === "number") ? id.longitude : null,
-              tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
-                               catch(e){ return null; } })(),
-              rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
-              rtc6: rtc.pub.filter(function(a){ return a.indexOf(":")>-1; }),
-              latency: lat, down: dl, up: ul
-            };
-          });
-        });
+    say("Reading what sites can see about you\u2026");
+    return Promise.all([identity(), webrtc()]).then(function(r){
+      say("Measuring your connection speed\u2026");
+      return measureSpeed().then(function(sp){
+        var id = r[0] || {}, rtc = r[1];
+        var bps = function(v){ return (typeof v === "number" && isFinite(v)) ? v / 1e6 : null; };
+        return {
+          v: METHOD,
+          at: Date.now(),
+          ip: id.ip || null,
+          city: id.city || null,
+          country: id.countryName || id.country || null,
+          org: id.org || null,
+          apiTz: id.timezone || null,
+          tz: (function(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+                           catch(e){ return null; } })(),
+          rtc4: rtc.pub.filter(function(a){ return a.indexOf(":")<0; }),
+          rtc6: rtc.pub.filter(function(a){ return a.indexOf(":")>-1; }),
+          down: sp ? bps(sp.download) : null,
+          up:   sp ? bps(sp.upload)   : null,
+          latency: (sp && typeof sp.latency === "number" && isFinite(sp.latency)) ? sp.latency : null
+        };
       });
     });
   }

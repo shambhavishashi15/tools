@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://tools-nine-orpin.vercel.app/sitemap.xml
+Sitemap: https://tools-1jf.pages.dev/sitemap.xml

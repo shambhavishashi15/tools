@@ -1,3 +1,6 @@
-# Old tool path, kept working permanently so existing links and shares survive
-/ip      /vpn-check/        301
-/ip/*    /vpn-check/:splat  301
+# The checker lives at the site root. Both former paths keep working
+# permanently, so links shared before the move still resolve.
+/ip            /    301
+/ip/*          /    301
+/vpn-check     /    301
+/vpn-check/*   /    301

@@ -2,37 +2,31 @@
 <!-- Swap the host for your domain the day you attach it -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://tools-nine-orpin.vercel.app/</loc>
-    <lastmod>2026-09-12</lastmod>
+    <loc>https://tools-1jf.pages.dev/</loc>
+    <lastmod>2026-09-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://tools-nine-orpin.vercel.app/vpn-check/</loc>
-    <lastmod>2026-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://tools-nine-orpin.vercel.app/about/</loc>
+    <loc>https://tools-1jf.pages.dev/about/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tools-nine-orpin.vercel.app/privacy/</loc>
+    <loc>https://tools-1jf.pages.dev/privacy/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://tools-nine-orpin.vercel.app/terms/</loc>
+    <loc>https://tools-1jf.pages.dev/terms/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://tools-nine-orpin.vercel.app/contact/</loc>
+    <loc>https://tools-1jf.pages.dev/contact/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

@@ -409,11 +409,13 @@ h1 em{font-style:normal;color:var(--amber)}
     if (e.hiddenNames.length) lines.push("Hidden: " + e.hiddenNames.join(", "));
     if (e.exposed.length) lines.push("Still visible: " + e.exposed.join(", "));
     var costs = [];
-    if (e.dDown != null && e.dDown > 8) costs.push(Math.round(e.dDown) + "% download");
-    if (e.dUp != null && e.dUp > 8) costs.push(Math.round(e.dUp) + "% upload");
-    if (e.dLat != null && e.dLat > 8) costs.push(Math.round(e.dLat) + "% latency");
-    if (costs.length) lines.push("Speed cost: " + costs.join(", "));
-    else if (e.dDown != null || e.dUp != null) lines.push("No meaningful speed cost");
+    if (e.pct > 0){
+      if (e.dDown != null && e.dDown > 15) costs.push(Math.round(e.dDown) + "% download");
+      if (e.dUp != null && e.dUp > 15) costs.push(Math.round(e.dUp) + "% upload");
+      if (e.dLat != null && e.dLat > 15) costs.push(Math.round(e.dLat) + "% latency");
+      if (costs.length) lines.push("Speed cost: " + costs.join(", "));
+      else if (e.dDown != null || e.dUp != null) lines.push("No meaningful speed cost");
+    }
     lines.push(url);
     return lines.join("\n");
   }
@@ -929,6 +931,16 @@ h1 em{font-style:normal;color:var(--amber)}
     if (!costs.length){
       $("spText").textContent = "Speed could not be measured";
       $("spSub").textContent = "The transfers did not finish. Try again on a steadier connection.";
+    } else if (none && cmp.measured){
+      /* The leak comparison found no VPN, so any speed difference belongs to
+         the line, and saying "your VPN costs you" would attribute ordinary
+         drift to a tunnel that is not there. One run of this tool did
+         exactly that: identical conditions, and the card blamed a VPN for a
+         33 per cent swing the connection produced on its own. */
+      $("spText").textContent = "Your line moved between the two runs";
+      $("spSub").textContent = "No VPN was detected, so the differences below are your connection varying between measurements, not a VPN cost. First run: " +
+        fmt(base.down) + " Mbps down, " + fmt(base.up) + " Mbps up, " +
+        (base.latency==null ? "—" : base.latency.toFixed(0)) + " ms.";
     } else {
       var worst = Math.max.apply(null, costs);
       var names = ["download","upload","latency"];

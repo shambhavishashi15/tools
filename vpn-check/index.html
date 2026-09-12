@@ -12,7 +12,28 @@
 <meta property="og:title" content="Is my VPN working? Check what it hides and what it costs">
 <meta property="og:description" content="Measure your connection before and after connecting your VPN: what it really hides, what still leaks, and what it costs you in speed. Free, no ads, nothing logged.">
 <meta property="og:url" content="https://tools-nine-orpin.vercel.app/vpn-check/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://tools-nine-orpin.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://tools-nine-orpin.vercel.app/og-image.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "VPN Check",
+  "url": "https://tools-nine-orpin.vercel.app/vpn-check/",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "description": "Free VPN checker that measures your connection before and after connecting: whether your VPN is working, what it hides, what leaks through WebRTC and IPv6, and what it costs in download and upload speed.",
+  "publisher": {
+    "@type": "Organization",
+    "name": "VPN Check",
+    "logo": { "@type": "ImageObject", "url": "https://tools-nine-orpin.vercel.app/logo-512.png" }
+  }
+}
+</script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -37,6 +58,21 @@
       "@type": "Question",
       "name": "Does a VPN hide my location?",
       "acceptedAnswer": { "@type": "Answer", "text": "It hides the location guessed from your address, which moves to the VPN server's city. It does not change your device's clock or its actual position, so a site comparing your timezone with your address can still tell a VPN is in use. Location guessed from an address is approximate in the first place: it points at provider infrastructure, often a nearby gateway city, not at your device." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does my VPN show the wrong location?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Location is guessed from who owns your address block, not from your device, so even without a VPN it often points at your provider's gateway city rather than your town. With a VPN on, sites see the VPN server's city. If the location shown is neither your VPN server's city nor plausibly your provider's region, run a before-and-after check: something may be leaking your real address." }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is my VPN connected but not working?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Connected only means a tunnel to the server exists. Traffic can still escape it: browser-extension VPNs cover one browser and usually not WebRTC, split tunneling excludes apps, and many VPNs let IPv6 out over the ordinary connection. A before-and-after comparison shows exactly which parts of your identity actually changed and which are still visible." }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I check if my VPN is working on my phone?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Open this page in your phone's browser and run the same two steps: baseline with the VPN off, then check with it on. Results are specific to each device, because a VPN app on your laptop does nothing for your phone, and a browser extension covers only that browser on that machine." }
     },
     {
       "@type": "Question",
@@ -341,6 +377,15 @@ h1 em{font-style:normal;color:var(--amber)}
 
     <h2>Does a VPN hide my location?</h2>
     <p>It hides the location guessed from your address, which moves to the VPN server's city. It does not move your device's clock or its actual position, so a site that compares your timezone with your address can still tell a VPN is in use even though it cannot see through it. Location from an address is approximate anyway: it points at provider infrastructure, often a mobile carrier's gateway city many kilometres away, not at your device. The details drawer above can measure that gap precisely, on your device, with your permission.</p>
+
+    <h2>Why does my VPN show the wrong location?</h2>
+    <p>Location is guessed from who owns your address block, not from your device, so even with no VPN it often points at your provider's gateway city rather than your town &mdash; a mobile user in one city is routinely placed in another. With a VPN on, sites should see the VPN server's city instead. If the location shown is neither of those, something may be leaking, and the before-and-after check above will show what.</p>
+
+    <h2>Why is my VPN connected but not working?</h2>
+    <p>"Connected" only means a tunnel to the server exists; it says nothing about what actually travels through it. Browser-extension VPNs cover one browser and usually leave WebRTC alone, split tunneling excludes whole apps, and plenty of VPNs quietly let IPv6 out over the ordinary connection. That is why this page compares before and after instead of trusting the connected icon: it shows which parts of your identity really changed.</p>
+
+    <h2>How do I check my VPN on my phone?</h2>
+    <p>Open this page in the phone's browser and run the same two steps there. Coverage is per device: a VPN app on your laptop does nothing for your phone, and a browser extension protects only that one browser on that one machine, which is exactly the kind of gap a per-device check makes visible.</p>
 
     <h2>Can a VPN hide everything?</h2>
     <p>No, and any tool that implies otherwise is selling something. Your screen size, graphics hardware, fonts and browser version stay readable whatever you do, and together they can identify a browser with no address at all. A VPN changes where you appear to connect from. It does not change what your browser is.</p>

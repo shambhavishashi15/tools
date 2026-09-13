@@ -9,15 +9,15 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>About — Tools that measure honestly</title>
 <meta name="description" content="Why these tools exist, how they are built, and the standard they are held to: no number on screen that the tool cannot stand behind.">
-<link rel="canonical" href="https://tools-1jf.pages.dev/about/">
+<link rel="canonical" href="https://www.freevpnchecker.com/about/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="website">
 <meta property="og:title" content="About — tools that measure honestly">
 <meta property="og:description" content="Why these tools exist, how they are built, and the standard they are held to: no number on screen that the tool cannot stand behind.">
-<meta property="og:url" content="https://tools-1jf.pages.dev/about/">
-<meta property="og:image" content="https://tools-1jf.pages.dev/og-image.png">
+<meta property="og:url" content="https://www.freevpnchecker.com/about/">
+<meta property="og:image" content="https://www.freevpnchecker.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://tools-1jf.pages.dev/og-image.png">
+<meta name="twitter:image" content="https://www.freevpnchecker.com/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -69,11 +69,19 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
 @media(max-width:560px){.mast nav{gap:12px}.mast nav a{font-size:13px}}
 </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-0S7RW18933"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-0S7RW18933');
+</script>
 </head>
 <body>
 <header class="mast">
   <div class="shell">
-    <a class="brand" href="/"><span class="dot" aria-hidden="true"></span>VPN&middot;CHECK</a>
+    <a class="brand" href="/"><span class="dot" aria-hidden="true"></span>VPN&middot;CHECKER</a>
     <nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
@@ -83,7 +91,7 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 
 <h2>Why this exists</h2>
 <p>Most free utilities on the web are built to carry advertising. The tool is the bait, the page is the product, and accuracy is whatever survives the layout. That is why so many of them are slow, cluttered, and vague about what their numbers actually mean.</p>
-<p>These are built the other way round. No ads, no accounts, no analytics that identify you, and no upsell. Each tool answers one question properly and then gets out of the way.</p>
+<p>These are built the other way round. No ads, no accounts, no upsell, and nothing you measure ever leaves your browser. Each tool answers one question properly and then gets out of the way.</p>
 
 <h2>The standard</h2>
 <div class="card">
@@ -95,8 +103,8 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 <p>Static pages, no framework, no tracking scripts, and as little server involvement as the job allows. The VPN checker's leak tests run entirely in your browser. Speed is measured with Cloudflare's open-source engine, because measuring a connection honestly requires a server near you, and one small deployment cannot be near everybody.</p>
 
 <h2>What is here now</h2>
-<p><a href="/">VPN check</a> &mdash; measures your connection before and after you connect, so it can tell you what your VPN really hides, what leaks past it, and what it costs you in speed. More tools are planned, each following the same rules.</p>
-<p><a class="btn" href="/">Try the VPN check</a></p>
+<p><a href="/">VPN checker</a> &mdash; measures your connection before and after you connect, so it can tell you what your VPN really hides, what leaks past it, and what it costs you in speed. More tools are planned, each following the same rules.</p>
+<p><a class="btn" href="/">Try the VPN checker</a></p>
 
 <h2>Contact</h2>
 <p>Corrections, bug reports and suggestions are welcome at <a href="mailto:funnriot@gmail.com">funnriot@gmail.com</a>. Reports that a number looks wrong are especially welcome &mdash; several real bugs have been found exactly that way.</p>
@@ -105,7 +113,7 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
     <a href="/">Home</a><a href="/about/">About</a>
     <a href="/privacy/">Privacy policy</a><a href="/terms/">Terms</a><a href="/contact/">Contact</a>
   </div>
-  <p>Free tools that measure honestly and keep nothing. No ads, no accounts, no trackers.</p>
+  <p>Free tools that measure honestly. No ads, no accounts, and no test results ever leave your device.</p>
 </footer>
 </div>
 <script>

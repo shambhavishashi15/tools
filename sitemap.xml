@@ -1,34 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Swap the host for your domain the day you attach it -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://tools-1jf.pages.dev/</loc>
+    <loc>https://www.freevpnchecker.com/</loc>
     <lastmod>2026-09-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://tools-1jf.pages.dev/about/</loc>
+    <loc>https://www.freevpnchecker.com/about/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://tools-1jf.pages.dev/privacy/</loc>
+    <loc>https://www.freevpnchecker.com/privacy/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://tools-1jf.pages.dev/terms/</loc>
+    <loc>https://www.freevpnchecker.com/terms/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://tools-1jf.pages.dev/contact/</loc>
+    <loc>https://www.freevpnchecker.com/contact/</loc>
     <lastmod>2026-09-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.freevpnchecker.com/hi/</loc>
+    <lastmod>2026-09-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.freevpnchecker.com/es/</loc>
+    <lastmod>2026-09-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 </urlset>

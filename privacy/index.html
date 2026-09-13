@@ -8,16 +8,16 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy policy — Tools</title>
-<meta name="description" content="What this site does and does not collect: no accounts, no cookies, no trackers, and results that stay on your own device.">
-<link rel="canonical" href="https://tools-1jf.pages.dev/privacy/">
+<meta name="description" content="What this site does and does not collect: no accounts, your test results never leave your device, and the only visitor measurement is Google Analytics.">
+<link rel="canonical" href="https://www.freevpnchecker.com/privacy/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Privacy policy">
-<meta property="og:description" content="What this site does and does not collect: no accounts, no cookies, no trackers, and results that stay on your own device.">
-<meta property="og:url" content="https://tools-1jf.pages.dev/privacy/">
-<meta property="og:image" content="https://tools-1jf.pages.dev/og-image.png">
+<meta property="og:description" content="What this site does and does not collect: no accounts, your test results never leave your device, and the only visitor measurement is Google Analytics.">
+<meta property="og:url" content="https://www.freevpnchecker.com/privacy/">
+<meta property="og:image" content="https://www.freevpnchecker.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://tools-1jf.pages.dev/og-image.png">
+<meta name="twitter:image" content="https://www.freevpnchecker.com/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -69,11 +69,19 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 :focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:3px}
 @media(max-width:560px){.mast nav{gap:12px}.mast nav a{font-size:13px}}
 </style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-0S7RW18933"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-0S7RW18933');
+</script>
 </head>
 <body>
 <header class="mast">
   <div class="shell">
-    <a class="brand" href="/"><span class="dot" aria-hidden="true"></span>VPN&middot;CHECK</a>
+    <a class="brand" href="/"><span class="dot" aria-hidden="true"></span>VPN&middot;CHECKER</a>
     <nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
@@ -83,11 +91,11 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 <p class="lede">This site exists to tell people what the internet can see about them. A privacy policy full of hedging would undercut the point, so this one is written plainly and describes what actually happens in the code.</p>
 
 <div class="card">
-<p><strong>The short version.</strong> No accounts, no cookies, no advertising, no analytics that identify you, and no database of visitors. Your test results are stored in your own browser and never sent to us. We do not sell or share anything, because we do not have anything to sell or share.</p>
+<p><strong>The short version.</strong> No accounts and no advertising. Your test results are stored in your own browser and never sent to us. We keep no database of visitors. The one thing that does measure you is Google Analytics, which counts visits so we can see whether anyone is finding the site; it is described in full below rather than buried.</p>
 </div>
 
 <h2>What stays on your device</h2>
-<p>The VPN check stores your baseline measurement and your recent results in your browser's local storage. That data never leaves your computer or phone, and we cannot read it. Clearing your browser data, or using the tool's own "Clear history" and "Start over" buttons, removes it permanently.</p>
+<p>The VPN checker stores your baseline measurement and your recent results in your browser's local storage. That data never leaves your computer or phone, and we cannot read it. Clearing your browser data, or using the tool's own "Clear history" and "Start over" buttons, removes it permanently.</p>
 
 <h2>What leaves your device, and why</h2>
 <ul>
@@ -99,8 +107,13 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
 <h2>Leak tests run entirely in your browser</h2>
 <p>The WebRTC check, the IPv6 check, the timezone comparison and the fingerprint readings all execute locally in JavaScript. Their results are displayed to you and stored on your device. They are never transmitted to us.</p>
 
+<h2>Analytics</h2>
+<p>This site uses Google Analytics to count page views and understand roughly where visitors come from. That means Google receives a record of your visit, including your IP address, browser and the pages you opened, and it sets cookies in your browser to recognise return visits. Google's own privacy policy governs what they do with it.</p>
+<p>We use it only to see whether anyone is finding the site. We do not run advertising, we do not build profiles of visitors, and we do not connect analytics data to anything you do inside the tools &mdash; your measurements never reach it, because they never leave your browser.</p>
+<p>If you would rather not be counted, any ad blocker or tracker blocker stops it, as does the "Do Not Track" or equivalent setting in most browsers. Nothing on this site stops working if you block it.</p>
+
 <h2>Cookies</h2>
-<p>This site sets no cookies of its own and runs no advertising or social tracking scripts. Fonts are loaded from Google Fonts, which means your browser requests those files from Google's servers.</p>
+<p>The only cookies set here come from Google Analytics, as described above. We set none of our own. Your theme choice and your saved test results are kept in local storage, not cookies, and never leave your device. Fonts are loaded from Google Fonts, which means your browser also requests those files from Google's servers.</p>
 
 <h2>Children</h2>
 <p>These tools are not directed at children and collect no personal information from anyone, including children.</p>
@@ -112,7 +125,7 @@ footer p{color:var(--faint);font-size:13px;margin:0;max-width:66ch}
     <a href="/">Home</a><a href="/about/">About</a>
     <a href="/privacy/">Privacy policy</a><a href="/terms/">Terms</a><a href="/contact/">Contact</a>
   </div>
-  <p>Free tools that measure honestly and keep nothing. No ads, no accounts, no trackers.</p>
+  <p>Free tools that measure honestly. No ads, no accounts, and no test results ever leave your device.</p>
 </footer>
 </div>
 <script>

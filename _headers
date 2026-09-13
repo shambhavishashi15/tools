@@ -7,3 +7,10 @@
 # The vendored measurement engine never changes without a filename change
 /vendor/*
   Cache-Control: public, max-age=86400
+
+# The site's real address is www.freevpnchecker.com. The *.pages.dev copy is
+# the same content on Cloudflare's default host, so search engines must be
+# told not to index it: without this, two identical sites compete and split
+# ranking signals. :project matches production and preview deployments alike.
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex

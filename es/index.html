@@ -1,24 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8">
+<script>window.__L = {"n_ip": "Tu dirección IP", "n_org": "Tu proveedor de red", "n_loc": "Tu país y ciudad", "n_rtc": "Tu dirección vía WebRTC", "n_v6": "Tu dirección IPv6", "n_tz": "Tu zona horaria", "sh_ip": "Dirección IP", "sh_org": "Proveedor", "sh_loc": "Ubicación", "sh_rtc": "WebRTC", "sh_v6": "IPv6", "st_hidden": "oculto", "st_exposed": "aún visible", "st_na": "sin medir", "st_tell": "te delata", "none": "ninguna", "unknown": "desconocido", "w_unmeasured": "Esto no pudo medirse en esta ejecución, así que no se afirma nada en ningún sentido.", "w_ip_h": "Los sitios ven ahora una dirección distinta de la que te dio tu proveedor.", "w_ip_e": "Los sitios siguen viendo la misma dirección de antes. Cambiarla es lo único para lo que existe una VPN, así que algo va mal.", "w_org_h": "El nombre de tu proveedor ya no es visible.", "w_org_e": "Los sitios aún pueden ver a quién le compras tu internet.", "w_loc_h": "Tu ubicación aparente se movió.", "w_loc_e": "Tu ubicación se ve igual que antes.", "w_rtc_none": "Tu navegador no está repartiendo ninguna dirección por WebRTC.", "w_rtc_tunnel": "WebRTC solo repite la dirección del propio túnel, así que no revela nada tuyo.", "w_rtc_same": "WebRTC repite tu dirección real, y nada la está ocultando.", "w_rtc_nojudge": "WebRTC repite la dirección actual, pero la línea base está incompleta, así que no puede juzgarse.", "w_rtc_real": "Tu navegador está repartiendo tu dirección real, saltándose el túnel. Cualquier página puede leerla con unas líneas de código. Activa la protección WebRTC en tu app de VPN, o bloquea WebRTC en el navegador.", "w_rtc_other": "Tu navegador reparte una dirección que no es la que presenta el túnel; esa dirección identifica tu conexión real. Activa la protección WebRTC en tu app de VPN, o bloquea WebRTC en el navegador.", "w_rtc_nolookup": "WebRTC devolvió una dirección, pero la consulta falló en esta ejecución, así que no puede compararse con lo que los sitios ven ahora.", "w_v6_gone": "Tu navegador ya no reparte ninguna dirección IPv6.", "w_v6_tunnel": "La única IPv6 visible es la que presenta el propio túnel.", "w_v6_identical": "Exactamente la misma dirección IPv6 sigue a la vista, sin que la VPN la haya tocado.", "w_v6_rotated": "La IPv6 visible es de la misma red que antes de la VPN. Solo cambió su final, algo que ocurre solo y no oculta nada.", "w_v6_advice": " Busca un ajuste de protección IPv6 en tu app de VPN, o desactiva IPv6 en la configuración de red del sistema.", "w_v6_new": "Apareció una dirección IPv6 solo después de conectar la VPN, así que no puede juzgarse: puede ser de la VPN, o tu conexión pudo ganar IPv6 entre medias.", "w_v6_moved": "La IPv6 visible pertenece ahora a una red distinta de tu línea base. Normalmente significa que la proporciona el túnel. Las redes móviles a veces mueven sus prefijos, así que si esto te importa, toma una línea base nueva y ejecuta una vez más.", "w_tz": "Tu reloj sigue diciendo {tz} mientras tu dirección dice {apiTz}. Los sitios comparan ambos, así que pueden saber que usas una VPN aunque no puedan ver a través de ella.", "v_rev": "Esta comparación parece invertida", "v_noinfo": "Información insuficiente", "v_ok": "Tu VPN está funcionando", "v_none": "Tu VPN no parece estar encendida", "v_part": "Funciona, pero no del todo", "vs_rev": "La línea base parece tomada con la VPN ya encendida y esta comprobación sin ella, así que oculto y visible apuntan al revés aquí abajo.", "vs_noinfo": "La consulta de la dirección no terminó, así que no había nada que comparar.", "vs_ok": "Todo lo que esta herramienta puede comprobar está ahora oculto.", "vs_none": "Nada de tu conexión cambió entre las dos comprobaciones.", "vs_part_1": "1 cosa sigue visible.", "vs_part_n": "{n} cosas siguen visibles.", "rev_hosted": "la línea base estaba en una red de hosting ({b}) mientras esta comprobación está en un proveedor doméstico ({n})", "rev_tz": "el reloj de la línea base no coincidía con su ubicación aparente, mientras que el de esta comprobación sí", "r_rev": "Esto parece una comparación invertida: {why}. Las etiquetas de oculto y aún visible apuntan al revés, y cualquier cambio de velocidad refleja sobre todo que la VPN se apagó. Empieza de nuevo: toma la línea base con la VPN totalmente apagada y luego ejecuta la comprobación con ella encendida.", "r_none": "Nada cambió entre las dos comprobaciones. O la VPN no conectó, o no está cubriendo este navegador. Ahora mismo tienes la misma exposición que con ella apagada.", "r_exposed": "Aún visible: {list}. Todo lo que se salta el túnel puede usarse para identificarte, que es justo lo que una VPN debe impedir. Los detalles de abajo dicen qué cambiar.", "r_samep": "Tu dirección cambió, pero tu proveedor y tu ubicación no. Ese patrón solo tiene dos explicaciones: la línea base se tomó con la VPN ya encendida, o ninguna VPN cubre este navegador y tu dirección simplemente rotó sola, algo que las redes móviles hacen. En ambos casos esto no es un antes-y-después limpio. Empieza de nuevo: línea base con la VPN totalmente apagada, luego la comprobación con ella encendida.", "r_tzleak": "Todo lo medible está oculto, pero tu reloj delata que usas una VPN. Es normal y no filtra tu identidad.", "ph_read": "Leyendo lo que los sitios pueden ver de ti…", "ph_speed": "Midiendo la velocidad de tu conexión…", "hint_time": "Hasta unos veinte segundos.", "hint_method": "El método de medición se actualizó, así que hace falta una línea base nueva.", "sp_nodata_t": "No se pudo medir la velocidad", "sp_nodata_s": "Las transferencias no terminaron. Inténtalo de nuevo con una conexión más estable.", "sp_rev_t": "Medido en la dirección equivocada", "sp_rev_s": "Estas cifras comparan una línea base con VPN contra una comprobación sin VPN, así que «más rápido» aquí significa sobre todo que la VPN se apagó. Empieza de nuevo con la VPN apagada para la línea base.", "sp_line_t": "Tu línea se movió entre las dos ejecuciones", "sp_line_s": "No se detectó ninguna VPN, así que las diferencias de abajo son tu conexión variando entre mediciones, no un coste de la VPN. Primera ejecución: {d} Mbps de bajada, {u} Mbps de subida, {l} ms.", "sp_lot": "Tu VPN te cuesta mucho, sobre todo en {x}", "sp_notice": "Tu VPN tiene un coste notable en {x}", "sp_little": "Tu VPN te cuesta un poco de velocidad", "sp_barely": "Tu VPN apenas te frena", "sp_faster": "Tu conexión se volvió más rápida", "x_down": "descarga", "x_up": "subida", "x_lat": "latencia", "d_faster": "{p}% más rápido", "d_slower": "{p}% más lento", "d_higher": "{p}% más alta", "d_lower": "{p}% más baja", "d_same": "prácticamente igual", "d_nofinish": "no terminó a tiempo", "d_na": "sin medir", "sp_without": "Sin la VPN: {d} Mbps de bajada, {u} Mbps de subida, {l} ms de latencia.", "sp_stale": " Esa línea base tiene {age}, y la velocidad de la línea cambia a lo largo del día: vuelve a tomarla antes de fiarte del cambio de velocidad.", "age_min": "unos {n} minutos", "age_hr": "unas {n} horas", "sp_swing": " Durante esta única prueba, la descarga osciló entre {lo} y {hi} Mbps, así que ejecuciones repetidas diferirán — esa oscilación es la conexión, no la medición.", "sp_swing2": " Dentro de esta única prueba, la descarga osciló entre {lo} y {hi} Mbps.", "shr_title": "Comprobación VPN — nota {g}", "shr_pct": "{bars} {p}% de los datos identificativos ocultos", "shr_hidden": "Oculto: {list}", "shr_visible": "Aún visible: {list}", "shr_cost": "Coste en velocidad: {list}", "shr_nocost": "Sin coste de velocidad relevante", "shr_dl": "{p}% descarga", "shr_ul": "{p}% subida", "shr_lat": "{p}% latencia", "copy_ok": "Copiado — pégalo donde quieras", "copy_block": "El navegador bloqueó la copia", "copy_none": "Portapapeles no disponible en este navegador", "stg_step1": "Paso 1 de 2", "stg_step2": "Paso 2 de 2", "stg_done": "Hecho", "stg_e_t": "Empieza con la VPN apagada", "stg_e_p": "Primero necesitamos una foto de tu conexión normal. Asegúrate de que la VPN está desconectada y toma la línea base.", "stg_e_b": "Tomar línea base", "stg_r_t": "Ahora enciende tu VPN", "stg_r_p": "Línea base guardada. Conecta tu VPN, espera a que indique conectado y ejecuta la comprobación. Puedes recargar la página o volver más tarde; la línea base se queda en este dispositivo.", "stg_r_b": "Ejecutar la comprobación", "stg_d_t": "Comprueba de nuevo cuando quieras", "stg_d_p": "Cambia a otro servidor de VPN y ejecútalo otra vez para compararlos, o empieza de nuevo para tomar una línea base fresca.", "stg_d_b": "Ejecutar de nuevo", "btn_measuring": "Midiendo…", "hint_saved": "Línea base guardada en este dispositivo.", "hint_err": "Algo salió mal. Inténtalo de nuevo.", "th_light": "Claro", "th_dark": "Oscuro"};</script>
 <script>
 (function(){try{var t=localStorage.getItem("tools.theme");
 document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){}})();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VPN checker &mdash; is your VPN actually working? Free online test</title>
-<meta name="description" content="Free online VPN checker. See whether your VPN is really hiding your IP address, what still leaks through WebRTC and IPv6, and what it costs you in speed. No login, no ads, nothing logged.">
-<link rel="canonical" href="https://www.freevpnchecker.com/">
+<title>Comprobador de VPN — ¿tu VPN funciona de verdad? Prueba gratis online</title>
+<meta name="description" content="Comprobador de VPN gratuito y online. Mira si tu VPN oculta de verdad tu dirección IP, qué se filtra por WebRTC e IPv6, y cuánto te cuesta en velocidad. Sin registro, sin anuncios.">
+<link rel="canonical" href="https://www.freevpnchecker.com/es/">
 <link rel="alternate" hreflang="en" href="https://www.freevpnchecker.com/">
 <link rel="alternate" hreflang="hi" href="https://www.freevpnchecker.com/hi/">
 <link rel="alternate" hreflang="es" href="https://www.freevpnchecker.com/es/">
 <link rel="alternate" hreflang="x-default" href="https://www.freevpnchecker.com/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta property="og:type" content="website">
-<meta property="og:title" content="VPN checker &mdash; is your VPN actually working?">
-<meta property="og:description" content="A free online VPN checker that measures your connection before and after connecting: what your VPN really hides, what leaks past it, and what it costs in speed.">
-<meta property="og:url" content="https://www.freevpnchecker.com/">
+<meta property="og:title" content="Comprobador de VPN — ¿tu VPN funciona de verdad?">
+<meta property="og:description" content="Un comprobador de VPN gratuito que mide tu conexión antes y después de conectar: qué oculta de verdad tu VPN, qué se le escapa y cuánto cuesta en velocidad.">
+<meta property="og:url" content="https://www.freevpnchecker.com/es/">
 <meta property="og:image" content="https://www.freevpnchecker.com/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -29,11 +30,11 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "VPN Check",
-  "url": "https://www.freevpnchecker.com/",
+  "url": "https://www.freevpnchecker.com/es/",
   "applicationCategory": "SecurityApplication",
   "operatingSystem": "Any",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "description": "Free VPN checker that measures your connection before and after connecting: whether your VPN is working, what it hides, what leaks through WebRTC and IPv6, and what it costs in download and upload speed.",
+  "description": "Comprobador de VPN gratuito y online. Mira si tu VPN oculta de verdad tu dirección IP, qué se filtra por WebRTC e IPv6, y cuánto te cuesta en velocidad. Sin registro, sin anuncios.",
   "publisher": {
     "@type": "Organization",
     "name": "VPN Check",
@@ -43,60 +44,34 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
 </script>
 <script type="application/ld+json">
 {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "How do I know if my VPN is actually working?",
-      "acceptedAnswer": { "@type": "Answer", "text": "A single reading cannot tell you, because it has nothing to compare against. The reliable way is a before-and-after check: measure what websites can see with the VPN off, connect it, measure again, and compare. Anything that stayed the same is something the VPN is not protecting. This page runs exactly that comparison for your IP address, network provider, location, WebRTC and IPv6." }
-    },
-    {
-      "@type": "Question",
-      "name": "What is a WebRTC leak?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Browsers include a built-in calling system, WebRTC, that discovers your network address so calls can connect directly. Any web page can quietly ask it for that address, and the answer can come from outside your VPN tunnel, revealing your real address even while the VPN is on. Browser-extension VPNs are especially prone to this, because they route web traffic but not WebRTC." }
-    },
-    {
-      "@type": "Question",
-      "name": "Why is my VPN slow?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Every packet takes a detour through the VPN server and gets encrypted on the way, so some cost in latency and throughput is normal. How much depends on the server's distance and load. Measuring the same route before and after connecting shows the real cost for your connection; free VPN servers commonly cost more than half of your bandwidth." }
-    },
-    {
-      "@type": "Question",
-      "name": "Does a VPN hide my location?",
-      "acceptedAnswer": { "@type": "Answer", "text": "It hides the location guessed from your address, which moves to the VPN server's city. It does not change your device's clock or its actual position, so a site comparing your timezone with your address can still tell a VPN is in use. Location guessed from an address is approximate in the first place: it points at provider infrastructure, often a nearby gateway city, not at your device." }
-    },
-    {
-      "@type": "Question",
-      "name": "Why does my VPN show the wrong location?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Location is guessed from who owns your address block, not from your device, so even without a VPN it often points at your provider's gateway city rather than your town. With a VPN on, sites see the VPN server's city. If the location shown is neither your VPN server's city nor plausibly your provider's region, run a before-and-after check: something may be leaking your real address." }
-    },
-    {
-      "@type": "Question",
-      "name": "Why is my VPN connected but not working?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Connected only means a tunnel to the server exists. Traffic can still escape it: browser-extension VPNs cover one browser and usually not WebRTC, split tunneling excludes apps, and many VPNs let IPv6 out over the ordinary connection. A before-and-after comparison shows exactly which parts of your identity actually changed and which are still visible." }
-    },
-    {
-      "@type": "Question",
-      "name": "How do I check if my VPN is working on my phone?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Open this page in your phone's browser and run the same two steps: baseline with the VPN off, then check with it on. Results are specific to each device, because a VPN app on your laptop does nothing for your phone, and a browser extension covers only that browser on that machine." }
-    },
-    {
-      "@type": "Question",
-      "name": "Can I use this to check my VPN for torrenting?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Partly. This checker measures your browser, while a torrent client is a separate application with its own connection, so a clean result here does not prove torrent traffic is going through the tunnel. Split tunneling, clients bound to a specific adapter, and browser-extension VPNs all cause the two to diverge. It does tell you whether the VPN is working on this device at all, whether IPv6 is escaping, and what the tunnel costs in speed. Verifying the client itself needs a torrent-specific IP check, where your client downloads a tracker file that reports the address it connected from." }
-    },
-    {
-      "@type": "Question",
-      "name": "Does this VPN checker work with NordVPN and other providers?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes, with any of them. It never asks which VPN you use, because it compares what websites can see before and after you connect rather than inspecting the software. That works identically for NordVPN, Proton, Surfshark, Mullvad, ExpressVPN, a corporate VPN, or a browser extension." }
-    },
-    {
-      "@type": "Question",
-      "name": "Can a VPN hide everything about me?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. Your screen size, graphics hardware and browser version remain readable whatever you do, and combined they can identify a browser without any address at all. A VPN changes where you appear to connect from; it does not change what your browser is." }
-    }
-  ]
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "¿Cómo compruebo si mi VPN funciona de verdad?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "La única forma fiable es comparar antes y después: mide con la VPN apagada, vuelve a medir con ella encendida y mira qué cambió. Lo que no cambió es lo que la VPN no protege. Esta página compara las cinco cosas que importan: dirección IP, proveedor, ubicación, WebRTC e IPv6."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "¿Qué es una fuga de WebRTC?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Los navegadores traen un sistema de llamadas, WebRTC, que descubre tu dirección de red real para conectar llamadas. Cualquier página puede pedírsela sin permiso, y la respuesta puede salir por fuera del túnel de la VPN — tu dirección real a la vista con la VPN encendida. Es especialmente común con VPN de extensión del navegador."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "¿Por qué mi VPN va lenta?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Cada paquete da un rodeo por el servidor de la VPN y se cifra por el camino, así que algo de coste es normal; cuánto depende de la distancia y la carga del servidor. Lo honesto es medir la misma ruta antes y después de conectar, que es lo que hace esta página. Los servidores gratuitos suelen costar más de la mitad del ancho de banda."
+   }
+  }
+ ]
 }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -309,21 +284,21 @@ h1 em{font-style:normal;color:var(--amber)}
 <header class="mast">
   <div class="shell">
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><span class="pulse" aria-hidden="true"></span>VPN&middot;CHECKER</a>
-    <nav class="lnav" aria-label="Language" style="display:flex;gap:10px;align-items:center;margin-right:12px;font-size:13px"><span style="color:var(--amber)">EN</span><a href="/hi/" style="color:var(--slate);text-decoration:none">हिन्दी</a><a href="/es/" style="color:var(--slate);text-decoration:none">ES</a></nav><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
+    <nav class="lnav" aria-label="Language" style="display:flex;gap:10px;align-items:center;margin-right:12px;font-size:13px"><a href="/" style="color:var(--slate);text-decoration:none">EN</a><a href="/hi/" style="color:var(--slate);text-decoration:none">हिन्दी</a><span style="color:var(--amber)">ES</span></nav><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
 
 <div class="shell">
-  <h1>Is your VPN <em>actually</em> working?</h1>
-  <p class="lede">A free online VPN checker that measures your connection twice, before and after you connect, instead of showing one reading and leaving you to guess. It tells you what your VPN really hides, what still leaks past it, and what it costs you in speed.</p>
+  <h1>¿Tu VPN funciona <em>de verdad</em>?</h1>
+  <p class="lede">Un comprobador de VPN gratuito y online que mide tu conexión dos veces —antes y después de conectar— en lugar de mostrarte una sola lectura y dejarte adivinar. Te dice qué oculta de verdad tu VPN, qué sigue filtrándose y cuánto te cuesta en velocidad.</p>
 
   <div class="stage" id="stageBox">
-    <p class="step" id="stepLabel">Step 1 of 2</p>
-    <h2 id="stageTitle">Start with your VPN turned off</h2>
-    <p class="txt" id="stageText">We need a picture of your ordinary connection first. Make sure your VPN is disconnected, then take the baseline.</p>
+    <p class="step" id="stepLabel">Paso 1 de 2</p>
+    <h2 id="stageTitle">Empieza con la VPN apagada</h2>
+    <p class="txt" id="stageText">Primero necesitamos una foto de tu conexión normal. Asegúrate de que la VPN está desconectada y toma la línea base.</p>
     <div class="row">
-      <button class="btn" id="mainBtn">Take baseline</button>
-      <button class="btn ghost hidden" id="resetBtn">Start over</button>
+      <button class="btn" id="mainBtn">Tomar línea base</button>
+      <button class="btn ghost hidden" id="resetBtn">Empezar de nuevo</button>
       <span class="hint" id="stageHint"></span>
     </div>
     <div class="scanline" aria-hidden="true"></div>
@@ -331,14 +306,14 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="card hidden" id="vpnCard">
     <div class="chead">
-      <p class="ctitle">Is it working</p>
+      <p class="ctitle">¿Está funcionando?</p>
       <div class="vwrap">
         <div class="gauge" aria-hidden="false">
-          <svg viewBox="0 0 120 120" role="img" aria-label="Share of identifying details hidden">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Proporción de datos identificativos ocultos">
             <circle class="gtrack" cx="60" cy="60" r="52"></circle>
             <circle class="gfill" id="gaugeFill" cx="60" cy="60" r="52"></circle>
           </svg>
-          <div class="gval"><b id="hidePct">&mdash;</b><span>hidden</span></div>
+          <div class="gval"><b id="hidePct">&mdash;</b><span>oculto</span></div>
         </div>
         <div class="vmain">
           <div class="verdict">
@@ -352,13 +327,13 @@ h1 em{font-style:normal;color:var(--amber)}
       </div>
       <div id="riskBox"></div>
       <div class="row hidden" id="shareRow" style="margin-top:20px">
-        <button class="btn ghost" id="shareBtn">Copy my report</button>
+        <button class="btn ghost" id="shareBtn">Copiar mi informe</button>
         <span class="hint" id="shareHint"></span>
       </div>
     </div>
     <div class="drawer" id="drawer">
       <button class="dtoggle" id="dToggle" aria-expanded="false">
-        <span>What changed and what didn't</span><span class="car">&rsaquo;</span>
+        <span>Qué cambió y qué no</span><span class="car">&rsaquo;</span>
       </button>
       <div class="dbody" id="dBody"></div>
     </div>
@@ -366,68 +341,44 @@ h1 em{font-style:normal;color:var(--amber)}
 
   <div class="card hidden" id="speedCard">
     <div class="chead">
-      <p class="ctitle">What it costs you</p>
+      <p class="ctitle">Lo que te cuesta</p>
       <p class="vtext" id="spText">&mdash;</p>
       <p class="vsub" id="spSub"></p>
     </div>
     <div class="speeds">
-      <div class="sp"><p class="k">Download</p><p class="v" id="dlNow">&mdash;</p><p class="d" id="dlDelta"></p></div>
-      <div class="sp"><p class="k">Upload</p><p class="v" id="ulNow">&mdash;</p><p class="d" id="ulDelta"></p></div>
-      <div class="sp"><p class="k">Latency</p><p class="v" id="ltNow">&mdash;</p><p class="d" id="ltDelta"></p></div>
+      <div class="sp"><p class="k">Descarga</p><p class="v" id="dlNow">&mdash;</p><p class="d" id="dlDelta"></p></div>
+      <div class="sp"><p class="k">Subida</p><p class="v" id="ulNow">&mdash;</p><p class="d" id="ulDelta"></p></div>
+      <div class="sp"><p class="k">Latencia</p><p class="v" id="ltNow">&mdash;</p><p class="d" id="ltDelta"></p></div>
     </div>
   </div>
 
   <div class="card hidden" id="histCard">
     <div class="chead">
-      <p class="ctitle">Past checks</p>
+      <p class="ctitle">Comprobaciones anteriores</p>
       <div class="histwrap">
         <table class="histtable">
-          <thead><tr><th>When</th><th>Exit</th><th>Grade</th><th>Hidden</th><th>Down</th><th>Up</th><th>Ping</th></tr></thead>
+          <thead><tr><th>Cuándo</th><th>Salida</th><th>Nota</th><th>Oculto</th><th>Baj.</th><th>Sub.</th><th>Ping</th></tr></thead>
           <tbody id="histBody"></tbody>
         </table>
       </div>
       <div class="row" style="margin-top:16px">
-        <button class="btn ghost" id="histClear">Clear history</button>
-        <span class="hint">Stored only on this device. Compare servers by switching your VPN's exit and running again.</span>
+        <button class="btn ghost" id="histClear">Borrar historial</button>
+        <span class="hint">Guardado solo en este dispositivo. Cambia el servidor de salida de tu VPN y vuelve a ejecutar para comparar servidores.</span>
       </div>
     </div>
   </div>
 
   <section class="prose">
-    <h2>What this VPN checker does</h2>
-    <p>Most VPN checker tools load a page, read your IP address, and show it back to you. That tells you what your address is now, but not whether your VPN changed anything &mdash; and changing it is the only job a VPN has. This one works differently. You run it once with the VPN off, once with it on, and it compares the two: your IP address, your network provider, your apparent location, the address your browser hands out through WebRTC, and your IPv6 address. Whatever stayed the same is something your VPN is not protecting, and the tool names it.</p>
-    <p>It works with any provider &mdash; NordVPN, Proton, Surfshark, Mullvad, ExpressVPN, your employer's corporate VPN, or a browser extension &mdash; because it never asks which one you use. It only compares what websites can see before and after &mdash; the one measurement that holds regardless of who made the software.</p>
-    <p>It is free, runs entirely in your browser with no login and no account, and stores nothing about you. The leak checks never leave your device. Speed is measured by Cloudflare's open-source engine against their nearest server, so the figures line up with the speed tests you already use.</p>
+    <h2>Qué hace este comprobador de VPN</h2>
+    <p>La mayoría de los comprobadores de VPN cargan una página, leen tu dirección IP y te la muestran. Eso te dice cuál es tu dirección ahora, pero no si la VPN cambió algo — y cambiarla es el único trabajo de una VPN. Este funciona distinto: lo ejecutas una vez con la VPN apagada y otra con ella encendida, y compara ambas — tu dirección IP, tu proveedor de red, tu ubicación aparente, la dirección que tu navegador reparte por WebRTC y tu IPv6. Todo lo que quedó igual es algo que tu VPN no está protegiendo, y la herramienta lo nombra.</p>
+    <p>Funciona con cualquier proveedor — NordVPN, Proton, Surfshark, Mullvad, ExpressVPN, la VPN corporativa de tu empresa o una extensión del navegador — porque nunca pregunta cuál usas. Solo compara lo que los sitios web pueden ver antes y después.</p>
+    <p>Es gratis, se ejecuta por completo en tu navegador sin registro ni cuenta, y no guarda nada sobre ti. Las pruebas de fugas nunca salen de tu dispositivo. La velocidad se mide con el motor de código abierto de Cloudflare contra su servidor más cercano, así que las cifras cuadran con los tests de velocidad que ya usas.</p>
 
-    <h2>How do I know if my VPN is actually working?</h2>
-    <p>A single reading cannot tell you, because it has nothing to compare against. The reliable way is a before-and-after check: measure what websites can see with the VPN off, connect it, measure again, and compare. Anything that stayed the same is something the VPN is not protecting. That is what this page does, for your IP address, your network provider, your apparent location, WebRTC and IPv6 &mdash; and it grades the result by how much of that identifying detail actually changed.</p>
+    <h2>¿Cómo sé si mi VPN funciona de verdad?</h2>
+    <p>Una sola lectura no puede decírtelo, porque no tiene con qué compararse. Lo fiable es una comprobación de antes y después: mide lo que los sitios ven con la VPN apagada, conéctala, vuelve a medir y compara. Lo que no cambió es lo que la VPN no protege. Eso es exactamente lo que hace esta página, y califica el resultado según cuánto detalle identificativo cambió de verdad.</p>
 
-    <h2>What does a VPN checker actually test?</h2>
-    <p>Your IP address is the headline, and the first thing this checker compares: with a working VPN the address sites see belongs to the VPN server, not to your provider. But an IP check alone is not enough, which is where most tools stop. Your network provider's name and your apparent city are read from the same address and should move with it. Your browser can hand out a second address through WebRTC that never passes through the tunnel at all. Your IPv6 address frequently escapes even when IPv4 is routed correctly, because many VPN clients tunnel one and ignore the other. And your device's clock still reports your real timezone, which any site can compare against your apparent location. This tool checks all five and grades them together.</p>
-
-    <h2>What is a WebRTC leak?</h2>
-    <p>Browsers ship a built-in calling system, WebRTC, that discovers your network address so calls can connect directly. Any page can quietly ask it for that address, with no permission prompt, and the answer can come from outside your VPN tunnel. That is a WebRTC leak: your real address on display while the VPN icon says connected. Browser-extension VPNs are especially prone to it, because they route web traffic but usually not WebRTC. This check compares the address WebRTC hands out against the address the site actually sees, which is the test that matters.</p>
-
-    <h2>Why is my VPN slow?</h2>
-    <p>Every packet takes a detour through the VPN server and gets encrypted on the way, so some cost is normal; how much depends on the server's distance and load. The honest way to size it is to measure the same route before and after connecting, at the same time of day &mdash; line speed drifts across the day, which is why this page warns you when your baseline has gone stale. Free servers commonly cost more than half of your bandwidth; a good paid server nearby can cost almost nothing. One more wrinkle: many relays limit speed per connection, so a single download can crawl even when a speed test, which opens many connections at once, shows a healthy total. This page measures with parallel connections too, so its number lines up with other testers.</p>
-
-    <h2>Does a VPN hide my location?</h2>
-    <p>It hides the location guessed from your address, which moves to the VPN server's city. It does not move your device's clock or its actual position, so a site that compares your timezone with your address can still tell a VPN is in use even though it cannot see through it. Location from an address is approximate anyway: it points at provider infrastructure, often a mobile carrier's gateway city many kilometres away, not at your device. The details drawer above can measure that gap precisely, on your device, with your permission.</p>
-
-    <h2>Why does my VPN show the wrong location?</h2>
-    <p>Location is guessed from who owns your address block, not from your device, so even with no VPN it often points at your provider's gateway city rather than your town &mdash; a mobile user in one city is routinely placed in another. With a VPN on, sites should see the VPN server's city instead. If the location shown is neither of those, something may be leaking, and the before-and-after check above will show what.</p>
-
-    <h2>Why is my VPN connected but not working?</h2>
-    <p>"Connected" only means a tunnel to the server exists; it says nothing about what actually travels through it. Browser-extension VPNs cover one browser and usually leave WebRTC alone, split tunneling excludes whole apps, and plenty of VPNs quietly let IPv6 out over the ordinary connection. That is why this page compares before and after instead of trusting the connected icon: it shows which parts of your identity really changed.</p>
-
-    <h2>How do I check my VPN on my phone?</h2>
-    <p>Open this page in the phone's browser and run the same two steps there. Coverage is per device: a VPN app on your laptop does nothing for your phone, and a browser extension protects only that one browser on that one machine, which is exactly the kind of gap a per-device check makes visible.</p>
-
-    <h2>Can I use this to check my VPN for torrenting?</h2>
-    <p>Partly, and it is worth knowing exactly where the limit is. This checker measures your browser. A torrent client is a separate application with its own connection, so a clean result here does not prove your torrent traffic is going through the tunnel. They genuinely diverge in common setups: split tunneling routes chosen apps around the VPN, some clients bind to a specific network adapter, and a browser extension VPN covers only that browser and nothing else on the machine. It does tell a torrent user whether the VPN works on this device at all, whether IPv6 is escaping, and what the tunnel costs in speed. To verify the client itself you need a torrent-specific IP check, which works by having your client download a tracker file that reports the address it connected from.</p>
-
-    <h2>Can a VPN hide everything?</h2>
-    <p>No, and any tool that implies otherwise is selling something. Your screen size, graphics hardware, fonts and browser version stay readable whatever you do, and together they can identify a browser with no address at all. A VPN changes where you appear to connect from. It does not change what your browser is.</p>
+    <h2>¿Por qué mi VPN está conectada pero no funciona?</h2>
+    <p>«Conectada» solo significa que existe un túnel hasta el servidor. El tráfico aún puede escapársele: las VPN de extensión cubren un solo navegador y casi nunca WebRTC, el túnel dividido deja aplicaciones enteras fuera, y muchas VPN dejan salir IPv6 por la conexión normal sin avisar. Por eso esta página compara antes y después en lugar de fiarse del icono de conectado.</p>
   </section>
 
   <div class="foot">

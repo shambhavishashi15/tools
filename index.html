@@ -8,7 +8,7 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VPN checker &mdash; is your VPN actually working? Free online test</title>
-<meta name="description" content="Free online VPN checker. See whether your VPN is really hiding your IP address, what still leaks through WebRTC and IPv6, and what it costs you in speed. No login, no ads, nothing logged.">
+<meta name="description" content="Free online VPN checker. See whether your VPN is really hiding your IP address, what still leaks through WebRTC and IPv6, and what it costs you in speed. No login, nothing logged.">
 <link rel="canonical" href="https://www.freevpnchecker.com/">
 <link rel="alternate" hreflang="en" href="https://www.freevpnchecker.com/">
 <link rel="alternate" hreflang="hi" href="https://www.freevpnchecker.com/hi/">
@@ -294,6 +294,26 @@ h1 em{font-style:normal;color:var(--amber)}
   .vtext{font-size:20px}
   h1{margin-top:32px}
 }
+
+.lang{position:relative;font-size:13px}
+.lang summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--rule-firm);border-radius:6px;padding:5px 9px;color:var(--slate);
+  user-select:none;line-height:1}
+.lang summary::-webkit-details-marker{display:none}
+.lang summary:hover{border-color:var(--ink);color:var(--ink)}
+.lang[open] summary{border-color:var(--amber);color:var(--ink)}
+.lang .car{font-size:10px;transition:transform .15s}
+.lang[open] .car{transform:rotate(180deg)}
+.lang .menu{position:absolute;right:0;top:calc(100% + 7px);z-index:60;min-width:152px;
+  background:var(--surface);border:1px solid var(--rule-firm);border-radius:8px;padding:5px;
+  display:flex;flex-direction:column}
+.lang .menu a,.lang .menu span{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:8px 11px;border-radius:5px;color:var(--slate);text-decoration:none;font-size:14px}
+.lang .menu a:hover{background:var(--bg);color:var(--ink)}
+.lang .menu .cur{background:var(--bg);color:var(--ink)}
+.lang .menu .tick{color:var(--amber);font-size:12px}
+.lang .glyph{width:14px;height:14px;flex:none;display:block}
+@media(max-width:600px){.lang .lbl{display:none}.lang summary{padding:5px 8px;gap:4px}}
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-0S7RW18933"></script>
@@ -309,7 +329,7 @@ h1 em{font-style:normal;color:var(--amber)}
 <header class="mast">
   <div class="shell">
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><span class="pulse" aria-hidden="true"></span>VPN&middot;CHECKER</a>
-    <nav class="lnav" aria-label="Language" style="display:flex;gap:10px;align-items:center;margin-right:12px;font-size:13px"><span style="color:var(--amber)">EN</span><a href="/hi/" style="color:var(--slate);text-decoration:none">हिन्दी</a><a href="/es/" style="color:var(--slate);text-decoration:none">ES</a></nav><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
+    <details class="lang"><summary aria-label="Choose language" role="button"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg><span class="lbl">EN</span><span class="car">&#9660;</span></summary><div class="menu"><span class="cur" aria-current="true">English<span class="tick">&#10003;</span></span><a href="/hi/" hreflang="hi" lang="hi">हिन्दी</a><a href="/es/" hreflang="es" lang="es">Español</a></div></details><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
 
@@ -431,7 +451,7 @@ h1 em{font-style:normal;color:var(--amber)}
   </section>
 
   <div class="foot">
-    <p>The leak checks run entirely in your browser against this site alone. Your address is never written to a log or a database here, and your results never leave your device. There is no advertising on this page; visits are counted with Google Analytics, which the <a href="/privacy/">privacy policy</a> describes in full. The speed test necessarily talks to Cloudflare's nearest server, since measuring a connection needs a server near you; it is configured not to submit your results to their statistics.</p>
+    <p>The leak checks run entirely in your browser against this site alone. Your address is never written to a log or a database here, and your results never leave your device. Visits are counted with Google Analytics, which the <a href="/privacy/">privacy policy</a> describes in full. The speed test necessarily talks to Cloudflare's nearest server, since measuring a connection needs a server near you; it is configured not to submit your results to their statistics.</p>
     <p>Speed figures cover the route between you and this one server. Speed is measured by Cloudflare's open-source engine, the same one behind speed.cloudflare.com, against whichever of their servers is nearest you — which is why these figures line up with other speed tests. Those requests reach Cloudflare; results are not submitted to their aggregated statistics. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--rule)">
@@ -1351,6 +1371,18 @@ h1 em{font-style:normal;color:var(--amber)}
   }
 })();
 
+</script>
+<script>
+(function(){
+  var d = document.querySelector("details.lang");
+  if (!d) return;
+  document.addEventListener("click", function(e){
+    if (d.open && !d.contains(e.target)) d.open = false;
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && d.open) d.open = false;
+  });
+})();
 </script>
 </body>
 </html>

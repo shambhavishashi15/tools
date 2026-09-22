@@ -9,7 +9,7 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VPN चेकर — क्या आपका VPN सच में काम कर रहा है? मुफ़्त ऑनलाइन जाँच</title>
-<meta name="description" content="मुफ़्त ऑनलाइन VPN चेकर। देखें कि आपका VPN आपका IP पता सच में छिपा रहा है या नहीं, WebRTC और IPv6 से क्या लीक हो रहा है, और स्पीड में कितनी कीमत चुकानी पड़ रही है। न लॉगिन, न विज्ञापन।">
+<meta name="description" content="मुफ़्त ऑनलाइन VPN चेकर। देखें कि आपका VPN आपका IP पता सच में छिपा रहा है या नहीं, WebRTC और IPv6 से क्या लीक हो रहा है, और स्पीड में कितनी कीमत चुकानी पड़ रही है। न लॉगिन, कुछ भी सहेजा नहीं जाता।">
 <link rel="canonical" href="https://www.freevpnchecker.com/hi/">
 <link rel="alternate" hreflang="en" href="https://www.freevpnchecker.com/">
 <link rel="alternate" hreflang="hi" href="https://www.freevpnchecker.com/hi/">
@@ -34,7 +34,7 @@ document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}
   "applicationCategory": "SecurityApplication",
   "operatingSystem": "Any",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "description": "मुफ़्त ऑनलाइन VPN चेकर। देखें कि आपका VPN आपका IP पता सच में छिपा रहा है या नहीं, WebRTC और IPv6 से क्या लीक हो रहा है, और स्पीड में कितनी कीमत चुकानी पड़ रही है। न लॉगिन, न विज्ञापन।",
+  "description": "मुफ़्त ऑनलाइन VPN चेकर। देखें कि आपका VPN आपका IP पता सच में छिपा रहा है या नहीं, WebRTC और IPv6 से क्या लीक हो रहा है, और स्पीड में कितनी कीमत चुकानी पड़ रही है। न लॉगिन, कुछ भी सहेजा नहीं जाता।",
   "publisher": {
     "@type": "Organization",
     "name": "VPN Check",
@@ -269,6 +269,26 @@ h1 em{font-style:normal;color:var(--amber)}
   .vtext{font-size:20px}
   h1{margin-top:32px}
 }
+
+.lang{position:relative;font-size:13px}
+.lang summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--rule-firm);border-radius:6px;padding:5px 9px;color:var(--slate);
+  user-select:none;line-height:1}
+.lang summary::-webkit-details-marker{display:none}
+.lang summary:hover{border-color:var(--ink);color:var(--ink)}
+.lang[open] summary{border-color:var(--amber);color:var(--ink)}
+.lang .car{font-size:10px;transition:transform .15s}
+.lang[open] .car{transform:rotate(180deg)}
+.lang .menu{position:absolute;right:0;top:calc(100% + 7px);z-index:60;min-width:152px;
+  background:var(--surface);border:1px solid var(--rule-firm);border-radius:8px;padding:5px;
+  display:flex;flex-direction:column}
+.lang .menu a,.lang .menu span{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:8px 11px;border-radius:5px;color:var(--slate);text-decoration:none;font-size:14px}
+.lang .menu a:hover{background:var(--bg);color:var(--ink)}
+.lang .menu .cur{background:var(--bg);color:var(--ink)}
+.lang .menu .tick{color:var(--amber);font-size:12px}
+.lang .glyph{width:14px;height:14px;flex:none;display:block}
+@media(max-width:600px){.lang .lbl{display:none}.lang summary{padding:5px 8px;gap:4px}}
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-0S7RW18933"></script>
@@ -284,7 +304,7 @@ h1 em{font-style:normal;color:var(--amber)}
 <header class="mast">
   <div class="shell">
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><span class="pulse" aria-hidden="true"></span>VPN&middot;CHECKER</a>
-    <nav class="lnav" aria-label="Language" style="display:flex;gap:10px;align-items:center;margin-right:12px;font-size:13px"><a href="/" style="color:var(--slate);text-decoration:none">EN</a><span style="color:var(--amber)">हिन्दी</span><a href="/es/" style="color:var(--slate);text-decoration:none">ES</a></nav><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
+    <details class="lang"><summary aria-label="Choose language" role="button"><svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg><span class="lbl">हिं</span><span class="car">&#9660;</span></summary><div class="menu"><a href="/" hreflang="en" lang="en">English</a><span class="cur" aria-current="true">हिन्दी<span class="tick">&#10003;</span></span><a href="/es/" hreflang="es" lang="es">Español</a></div></details><nav><a href="/about/">About</a><a href="/contact/">Contact</a><button class="tbtn" id="themeBtn" aria-label="Switch colour theme">Light</button></nav>
   </div>
 </header>
 
@@ -382,8 +402,7 @@ h1 em{font-style:normal;color:var(--amber)}
   </section>
 
   <div class="foot">
-    <p>The leak checks run entirely in your browser against this site alone. Your address is never written to a log or a database here, and your results never leave your device. There is no advertising on this page; visits are counted with Google Analytics, which the <a href="/privacy/">privacy policy</a> describes in full. The speed test necessarily talks to Cloudflare's nearest server, since measuring a connection needs a server near you; it is configured not to submit your results to their statistics.</p>
-    <p>Speed figures cover the route between you and this one server. Speed is measured by Cloudflare's open-source engine, the same one behind speed.cloudflare.com, against whichever of their servers is nearest you — which is why these figures line up with other speed tests. Those requests reach Cloudflare; results are not submitted to their aggregated statistics. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
+    <p>लीक की जाँचें पूरी तरह आपके ब्राउज़र में, सिर्फ़ इसी साइट के विरुद्ध चलती हैं। आपका पता यहाँ किसी लॉग या डेटाबेस में कभी नहीं लिखा जाता, और आपके नतीजे आपके डिवाइस से बाहर नहीं जाते। विज़िट Google Analytics से गिनी जाती हैं, जिसका पूरा ब्योरा <a href="/privacy/">गोपनीयता नीति</a> में है। स्पीड टेस्ट को Cloudflare के सबसे नज़दीकी सर्वर से बात करनी ही पड़ती है, क्योंकि कनेक्शन मापने के लिए पास का सर्वर चाहिए; वह इस तरह सेट है कि आपके नतीजे उनके आँकड़ों में जमा न हों।</p><p>Speed figures cover the route between you and this one server. Speed is measured by Cloudflare's open-source engine, the same one behind speed.cloudflare.com, against whichever of their servers is nearest you — which is why these figures line up with other speed tests. Those requests reach Cloudflare; results are not submitted to their aggregated statistics. Differences under about fifteen per cent are the line moving rather than the VPN. Latency is measured to the nearest edge of this site's network, and upload is timed end to end, which reads slightly conservative rather than inflated. Numbers still move with the moment, so a difference under about ten per cent is noise rather than a finding, and a dedicated speed test with servers next to your VPN exit may read higher than this route does.</p>
     <p>A VPN cannot hide everything. Your screen size, graphics card and browser version stay readable whatever you do, and together they can identify you with no address at all.</p>
     <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:20px;padding-top:18px;border-top:1px solid var(--rule)">
       <a href="/" style="font-size:14px;color:var(--slate);text-decoration:none">Home</a>
@@ -1302,6 +1321,18 @@ h1 em{font-style:normal;color:var(--amber)}
   }
 })();
 
+</script>
+<script>
+(function(){
+  var d = document.querySelector("details.lang");
+  if (!d) return;
+  document.addEventListener("click", function(e){
+    if (d.open && !d.contains(e.target)) d.open = false;
+  });
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && d.open) d.open = false;
+  });
+})();
 </script>
 </body>
 </html>

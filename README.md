@@ -1,7 +1,7 @@
 # tools
 
 Free web tools that measure honestly and keep nothing.
-No ads, no accounts, no visitor database. Test results never leave the browser.
+No accounts, no visitor database. Test results never leave the browser.
 Visits are counted with Google Analytics (G-0S7RW18933); see privacy/.
 
 Live: https://www.freevpnchecker.com

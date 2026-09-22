@@ -452,6 +452,106 @@ h1 em{font-style:normal;color:var(--amber)}
   var esc = function(s){ return String(s).replace(/[&<>"']/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
 
+  /* Every sentence the tool can say lives in this table. Logic below refers
+     to stable keys (i.k) and templates, never to display text, so a
+     translated page is this same file with a different L. {x} slots are
+     filled by T(). */
+  var L = window.__L || {
+    n_ip:"Your IP address", n_org:"Your network provider", n_loc:"Your country and city",
+    n_rtc:"Your address via WebRTC", n_v6:"Your IPv6 address", n_tz:"Your timezone",
+    sh_ip:"IP address", sh_org:"Provider", sh_loc:"Location", sh_rtc:"WebRTC", sh_v6:"IPv6",
+    st_hidden:"hidden", st_exposed:"still visible", st_na:"not measured", st_tell:"gives you away",
+    none:"none", unknown:"unknown",
+    w_unmeasured:"This could not be measured on this run, so no claim is made either way.",
+    w_ip_h:"Sites now see a different address from the one your provider gave you.",
+    w_ip_e:"Sites still see the same address as before. This is the one thing a VPN exists to change, so something is wrong.",
+    w_org_h:"Your provider's name is no longer visible.",
+    w_org_e:"Sites can still see who you buy your internet from.",
+    w_loc_h:"Your apparent location moved.",
+    w_loc_e:"Your location looks the same as it did before.",
+    w_rtc_none:"Your browser is not giving out any address through WebRTC.",
+    w_rtc_tunnel:"WebRTC only repeats the tunnel's own address, so nothing of yours is revealed.",
+    w_rtc_same:"WebRTC repeats your real address, and nothing is concealing it.",
+    w_rtc_nojudge:"WebRTC repeats the current address, but the baseline is incomplete, so it cannot be judged.",
+    w_rtc_real:"Your browser is handing out your real address, straight past the tunnel. Any page can read it in a few lines of script. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser.",
+    w_rtc_other:"Your browser is handing out an address that is not the one the tunnel presents. That address identifies your real connection. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser.",
+    w_rtc_nolookup:"WebRTC returned an address, but the lookup failed on this run, so it cannot be judged against what sites currently see.",
+    w_v6_gone:"Your browser is no longer giving out an IPv6 address.",
+    w_v6_tunnel:"The only IPv6 visible is the one the tunnel itself presents.",
+    w_v6_identical:"The exact same IPv6 address is still on display, completely untouched by the VPN.",
+    w_v6_rotated:"The IPv6 on display is from the same network as before the VPN. Only its ending changed, which happens by itself and hides nothing.",
+    w_v6_advice:" Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings.",
+    w_v6_new:"An IPv6 address appeared only after the VPN connected, so it cannot be judged: it may belong to the VPN, or your connection may have gained IPv6 in between.",
+    w_v6_moved:"The visible IPv6 now belongs to a different network from your baseline. That usually means the tunnel provides it. Mobile networks do occasionally move their own prefixes, so if this matters to you, take a fresh baseline and run once more.",
+    w_tz:"Your clock still says {tz} while your address says {apiTz}. Sites compare the two, so they can tell you are on a VPN even though they cannot see through it.",
+    v_rev:"This comparison looks reversed", v_noinfo:"Not enough information",
+    v_ok:"Your VPN is working", v_none:"Your VPN does not appear to be on",
+    v_part:"Working, but not completely",
+    vs_rev:"The baseline looks like it was taken with the VPN already on, and this check without it, so hidden and visible below point the wrong way.",
+    vs_noinfo:"The address lookup did not complete, so there was nothing to compare.",
+    vs_ok:"Everything this tool can check is now hidden.",
+    vs_none:"Nothing about your connection changed between the two checks.",
+    vs_part_1:"1 thing is still visible.", vs_part_n:"{n} things are still visible.",
+    rev_hosted:"the baseline sat on a hosting network ({b}) while this check is on a consumer provider ({n})",
+    rev_tz:"the baseline's clock disagreed with its apparent location, while this check's agrees",
+    r_rev:"This looks like a reversed comparison: {why}. The hidden and still-visible labels above point the wrong way, and any speed change mostly reflects the VPN switching off. Start over, take the baseline with the VPN fully off, then run the check with it on.",
+    r_none:"Nothing changed between the two checks. Either the VPN did not connect, or it is not covering this browser. Right now you have the same exposure you would have with it switched off.",
+    r_exposed:"Still visible: {list}. Anything that gets past the tunnel can be used to identify you, which is the one thing a VPN is meant to prevent. The details below say what to change.",
+    r_samep:"Your address changed, but your provider and location did not. That pattern means one of two things: the baseline was taken with the VPN already on, or no VPN is covering this browser and your address simply rotated on its own, which mobile networks do. Either way this is not a clean before-and-after. Start over, take the baseline with the VPN fully off, then run the check with it on.",
+    r_tzleak:"Everything measurable is hidden, but your clock still gives away that a VPN is in use. That is normal and not a leak of your identity.",
+    ph_read:"Reading what sites can see about you\u2026",
+    ph_speed:"Measuring your connection speed\u2026",
+    hint_time:"Up to about twenty seconds.",
+    hint_method:"The measurement method was updated, so a fresh baseline is needed.",
+    sp_nodata_t:"Speed could not be measured",
+    sp_nodata_s:"The transfers did not finish. Try again on a steadier connection.",
+    sp_rev_t:"Measured in the wrong direction",
+    sp_rev_s:"These numbers compare a VPN-on baseline against a VPN-off check, so faster here mostly means the VPN came off. Start over with the VPN off for the baseline.",
+    sp_line_t:"Your line moved between the two runs",
+    sp_line_s:"No VPN was detected, so the differences below are your connection varying between measurements, not a VPN cost. First run: {d} Mbps down, {u} Mbps up, {l} ms.",
+    sp_lot:"Your VPN costs you a lot, mostly in {x}",
+    sp_notice:"Your VPN has a noticeable cost in {x}",
+    sp_little:"Your VPN costs you a little speed",
+    sp_barely:"Your VPN barely slows you down",
+    sp_faster:"Your connection got faster",
+    x_down:"download", x_up:"upload", x_lat:"latency",
+    d_faster:"{p}% faster", d_slower:"{p}% slower", d_higher:"{p}% higher", d_lower:"{p}% lower",
+    d_same:"about the same", d_nofinish:"did not finish in time", d_na:"not measured",
+    sp_without:"Without the VPN: {d} Mbps down, {u} Mbps up, {l} ms latency.",
+    sp_stale:" That baseline is {age} old, and line speed changes across the day, so retake it before trusting the speed change.",
+    age_min:"about {n} minutes", age_hr:"about {n} hours",
+    sp_swing:" During this one test, download itself swung between {lo} and {hi} Mbps, so repeated runs will differ \u2014 that swing is the connection, not the measurement.",
+    sp_swing2:" Within this one test, download swung between {lo} and {hi} Mbps.",
+    shr_title:"VPN Check \u2014 grade {g}",
+    shr_pct:"{bars} {p}% of identifying details hidden",
+    shr_hidden:"Hidden: {list}", shr_visible:"Still visible: {list}",
+    shr_cost:"Speed cost: {list}", shr_nocost:"No meaningful speed cost",
+    shr_dl:"{p}% download", shr_ul:"{p}% upload", shr_lat:"{p}% latency",
+    copy_ok:"Copied \u2014 paste it anywhere", copy_block:"Copy blocked by the browser",
+    copy_none:"Clipboard unavailable in this browser",
+    stg_step1:"Step 1 of 2", stg_step2:"Step 2 of 2", stg_done:"Done",
+    stg_e_t:"Start with your VPN turned off",
+    stg_e_p:"We need a picture of your ordinary connection first. Make sure your VPN is disconnected, then take the baseline.",
+    stg_e_b:"Take baseline",
+    stg_r_t:"Now turn your VPN on",
+    stg_r_p:"Baseline saved. Connect your VPN, wait until it reports connected, then run the check. You can reload this page or come back later; the baseline stays on this device.",
+    stg_r_b:"Run the check",
+    stg_d_t:"Check again any time",
+    stg_d_p:"Switch to a different VPN server and run it again to compare them, or start over to take a fresh baseline.",
+    stg_d_b:"Run again",
+    btn_measuring:"Measuring\u2026",
+    hint_saved:"Baseline saved on this device.",
+    hint_err:"Something went wrong. Try again.",
+    th_light:"Light", th_dark:"Dark"
+  };
+  function T(k, p){
+    var t = L[k] != null ? L[k] : k;
+    if (p) for (var key in p) t = t.split("{"+key+"}").join(p[key]);
+    return t;
+  }
+
+
+
   /* Storage that falls back to memory. The baseline has to survive the reload
      a VPN reconnect usually causes, but some embedded contexts block
      localStorage outright and a thrown error there would break the whole tool
@@ -826,104 +926,6 @@ h1 em{font-style:normal;color:var(--amber)}
   function prefix64(a){
     var c = canon6(a);
     return c ? c.split(":").slice(0,4).join(":") : String(a).toLowerCase();
-  }
-
-  /* Every sentence the tool can say lives in this table. Logic below refers
-     to stable keys (i.k) and templates, never to display text, so a
-     translated page is this same file with a different L. {x} slots are
-     filled by T(). */
-  var L = window.__L || {
-    n_ip:"Your IP address", n_org:"Your network provider", n_loc:"Your country and city",
-    n_rtc:"Your address via WebRTC", n_v6:"Your IPv6 address", n_tz:"Your timezone",
-    sh_ip:"IP address", sh_org:"Provider", sh_loc:"Location", sh_rtc:"WebRTC", sh_v6:"IPv6",
-    st_hidden:"hidden", st_exposed:"still visible", st_na:"not measured", st_tell:"gives you away",
-    none:"none", unknown:"unknown",
-    w_unmeasured:"This could not be measured on this run, so no claim is made either way.",
-    w_ip_h:"Sites now see a different address from the one your provider gave you.",
-    w_ip_e:"Sites still see the same address as before. This is the one thing a VPN exists to change, so something is wrong.",
-    w_org_h:"Your provider's name is no longer visible.",
-    w_org_e:"Sites can still see who you buy your internet from.",
-    w_loc_h:"Your apparent location moved.",
-    w_loc_e:"Your location looks the same as it did before.",
-    w_rtc_none:"Your browser is not giving out any address through WebRTC.",
-    w_rtc_tunnel:"WebRTC only repeats the tunnel's own address, so nothing of yours is revealed.",
-    w_rtc_same:"WebRTC repeats your real address, and nothing is concealing it.",
-    w_rtc_nojudge:"WebRTC repeats the current address, but the baseline is incomplete, so it cannot be judged.",
-    w_rtc_real:"Your browser is handing out your real address, straight past the tunnel. Any page can read it in a few lines of script. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser.",
-    w_rtc_other:"Your browser is handing out an address that is not the one the tunnel presents. That address identifies your real connection. Turn on WebRTC protection in your VPN app, or block WebRTC in your browser.",
-    w_rtc_nolookup:"WebRTC returned an address, but the lookup failed on this run, so it cannot be judged against what sites currently see.",
-    w_v6_gone:"Your browser is no longer giving out an IPv6 address.",
-    w_v6_tunnel:"The only IPv6 visible is the one the tunnel itself presents.",
-    w_v6_identical:"The exact same IPv6 address is still on display, completely untouched by the VPN.",
-    w_v6_rotated:"The IPv6 on display is from the same network as before the VPN. Only its ending changed, which happens by itself and hides nothing.",
-    w_v6_advice:" Look for an IPv6 protection setting in your VPN app, or turn IPv6 off in your system network settings.",
-    w_v6_new:"An IPv6 address appeared only after the VPN connected, so it cannot be judged: it may belong to the VPN, or your connection may have gained IPv6 in between.",
-    w_v6_moved:"The visible IPv6 now belongs to a different network from your baseline. That usually means the tunnel provides it. Mobile networks do occasionally move their own prefixes, so if this matters to you, take a fresh baseline and run once more.",
-    w_tz:"Your clock still says {tz} while your address says {apiTz}. Sites compare the two, so they can tell you are on a VPN even though they cannot see through it.",
-    v_rev:"This comparison looks reversed", v_noinfo:"Not enough information",
-    v_ok:"Your VPN is working", v_none:"Your VPN does not appear to be on",
-    v_part:"Working, but not completely",
-    vs_rev:"The baseline looks like it was taken with the VPN already on, and this check without it, so hidden and visible below point the wrong way.",
-    vs_noinfo:"The address lookup did not complete, so there was nothing to compare.",
-    vs_ok:"Everything this tool can check is now hidden.",
-    vs_none:"Nothing about your connection changed between the two checks.",
-    vs_part_1:"1 thing is still visible.", vs_part_n:"{n} things are still visible.",
-    rev_hosted:"the baseline sat on a hosting network ({b}) while this check is on a consumer provider ({n})",
-    rev_tz:"the baseline's clock disagreed with its apparent location, while this check's agrees",
-    r_rev:"This looks like a reversed comparison: {why}. The hidden and still-visible labels above point the wrong way, and any speed change mostly reflects the VPN switching off. Start over, take the baseline with the VPN fully off, then run the check with it on.",
-    r_none:"Nothing changed between the two checks. Either the VPN did not connect, or it is not covering this browser. Right now you have the same exposure you would have with it switched off.",
-    r_exposed:"Still visible: {list}. Anything that gets past the tunnel can be used to identify you, which is the one thing a VPN is meant to prevent. The details below say what to change.",
-    r_samep:"Your address changed, but your provider and location did not. That pattern means one of two things: the baseline was taken with the VPN already on, or no VPN is covering this browser and your address simply rotated on its own, which mobile networks do. Either way this is not a clean before-and-after. Start over, take the baseline with the VPN fully off, then run the check with it on.",
-    r_tzleak:"Everything measurable is hidden, but your clock still gives away that a VPN is in use. That is normal and not a leak of your identity.",
-    ph_read:"Reading what sites can see about you\u2026",
-    ph_speed:"Measuring your connection speed\u2026",
-    hint_time:"Up to about twenty seconds.",
-    hint_method:"The measurement method was updated, so a fresh baseline is needed.",
-    sp_nodata_t:"Speed could not be measured",
-    sp_nodata_s:"The transfers did not finish. Try again on a steadier connection.",
-    sp_rev_t:"Measured in the wrong direction",
-    sp_rev_s:"These numbers compare a VPN-on baseline against a VPN-off check, so faster here mostly means the VPN came off. Start over with the VPN off for the baseline.",
-    sp_line_t:"Your line moved between the two runs",
-    sp_line_s:"No VPN was detected, so the differences below are your connection varying between measurements, not a VPN cost. First run: {d} Mbps down, {u} Mbps up, {l} ms.",
-    sp_lot:"Your VPN costs you a lot, mostly in {x}",
-    sp_notice:"Your VPN has a noticeable cost in {x}",
-    sp_little:"Your VPN costs you a little speed",
-    sp_barely:"Your VPN barely slows you down",
-    sp_faster:"Your connection got faster",
-    x_down:"download", x_up:"upload", x_lat:"latency",
-    d_faster:"{p}% faster", d_slower:"{p}% slower", d_higher:"{p}% higher", d_lower:"{p}% lower",
-    d_same:"about the same", d_nofinish:"did not finish in time", d_na:"not measured",
-    sp_without:"Without the VPN: {d} Mbps down, {u} Mbps up, {l} ms latency.",
-    sp_stale:" That baseline is {age} old, and line speed changes across the day, so retake it before trusting the speed change.",
-    age_min:"about {n} minutes", age_hr:"about {n} hours",
-    sp_swing:" During this one test, download itself swung between {lo} and {hi} Mbps, so repeated runs will differ \u2014 that swing is the connection, not the measurement.",
-    sp_swing2:" Within this one test, download swung between {lo} and {hi} Mbps.",
-    shr_title:"VPN Check \u2014 grade {g}",
-    shr_pct:"{bars} {p}% of identifying details hidden",
-    shr_hidden:"Hidden: {list}", shr_visible:"Still visible: {list}",
-    shr_cost:"Speed cost: {list}", shr_nocost:"No meaningful speed cost",
-    shr_dl:"{p}% download", shr_ul:"{p}% upload", shr_lat:"{p}% latency",
-    copy_ok:"Copied \u2014 paste it anywhere", copy_block:"Copy blocked by the browser",
-    copy_none:"Clipboard unavailable in this browser",
-    stg_step1:"Step 1 of 2", stg_step2:"Step 2 of 2", stg_done:"Done",
-    stg_e_t:"Start with your VPN turned off",
-    stg_e_p:"We need a picture of your ordinary connection first. Make sure your VPN is disconnected, then take the baseline.",
-    stg_e_b:"Take baseline",
-    stg_r_t:"Now turn your VPN on",
-    stg_r_p:"Baseline saved. Connect your VPN, wait until it reports connected, then run the check. You can reload this page or come back later; the baseline stays on this device.",
-    stg_r_b:"Run the check",
-    stg_d_t:"Check again any time",
-    stg_d_p:"Switch to a different VPN server and run it again to compare them, or start over to take a fresh baseline.",
-    stg_d_b:"Run again",
-    btn_measuring:"Measuring\u2026",
-    hint_saved:"Baseline saved on this device.",
-    hint_err:"Something went wrong. Try again.",
-    th_light:"Light", th_dark:"Dark"
-  };
-  function T(k, p){
-    var t = L[k] != null ? L[k] : k;
-    if (p) for (var key in p) t = t.split("{"+key+"}").join(p[key]);
-    return t;
   }
 
   function compare(base, now){

@@ -546,7 +546,7 @@ h1 em{font-style:normal;color:var(--amber)}
      an older method is not comparable to a run taken with a newer one, and
      silently comparing across methods would produce deltas that are artifacts
      of the code change rather than of the VPN. */
-  var METHOD = 7;
+  var METHOD = 8;
   var staleBaselineWiped = false;
   var HKEY = "vpncheck.history.v1";
   var lastReport = null;
@@ -973,7 +973,14 @@ h1 em{font-style:normal;color:var(--amber)}
        while the same real network is still on display. */
     var base6 = (base.rtc6 || []), now6 = (now.rtc6 || []);
     if (base6.length || now6.length){
+      /* Baseline networks include the address the site saw at baseline, not
+         only the WebRTC candidates: on an IPv6-primary carrier the site-seen
+         address is the most reliable record of the real network. */
       var basePrefixes = base6.map(prefix64);
+      if (base.ip && String(base.ip).indexOf(":") > -1){
+        var bp = prefix64(base.ip);
+        if (basePrefixes.indexOf(bp) < 0) basePrefixes.push(bp);
+      }
       var seen6 = (now.ip && String(now.ip).indexOf(":") > -1) ? now.ip : null;
       var extra6 = now6.filter(function(a){ return a !== seen6; });
       var sameNet = extra6.filter(function(a){ return basePrefixes.indexOf(prefix64(a)) > -1; });
@@ -982,8 +989,24 @@ h1 em{font-style:normal;color:var(--amber)}
         st6 = "hidden";
         why6 = T("w_v6_gone");
       } else if (!extra6.length){
-        st6 = "hidden";
-        why6 = T("w_v6_tunnel");
+        /* Candidates only repeat the address the site already sees. Calling
+           that hidden assumes a tunnel presented it, which is false when no
+           tunnel exists: with the VPN off, the site-seen address is the real
+           one and repeating it is exposure, not concealment. Decide by network,
+           the same test used below, so a carrier-rotated ending still counts
+           as the same real network rather than as a successful hide. */
+        var seenPrefix = seen6 ? prefix64(seen6) : null;
+        if (seenPrefix && basePrefixes.indexOf(seenPrefix) > -1){
+          st6 = "exposed";
+          why6 = ((base6.indexOf(seen6) > -1 || String(seen6) === String(base.ip))
+                   ? T("w_v6_identical") : T("w_v6_rotated")) + T("w_v6_advice");
+        } else if (!basePrefixes.length){
+          st6 = "na";
+          why6 = T("w_v6_new");
+        } else {
+          st6 = "hidden";
+          why6 = T("w_v6_tunnel");
+        }
       } else if (sameNet.length){
         st6 = "exposed";
         /* Same address and rotated-ending are both real-network exposure, but
